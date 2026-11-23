@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cargo Record</title>
+<style>
+  /* VOICE: same quiet working tool as the Port Watch Log, flat panels, one yellow accent.
+     IDEA: a ship's cargo plan: side profile to pick the hatch, plan view of the hatch to record each unit.
+     PICTURE: the ship profile (aft left, bow right) and the hatch plan with bow at the top, PORT and STBD at the sides.
+     COLOUR and TYPE: Port Watch Log palette (amber fills, dark text), hull in deep grey, system font with mono for codes.
+     LAYOUT: one column, steps top to bottom: crane, hatch, tier, units, record. */
+  :root {
+    --bg: #f2f3f5; --surface: #ffffff; --fg: #1b222a; --muted: #5f6b76; --line: #e6e9ed;
+    --chip: #eef0f3; --chip-sel: #fff0b8; --accent: #f2b705; --accent-fg: #1c1500; --accent-ink: #8a5f00;
+    --danger: #b3261e;
+    --hull: #2b3742; --anti: #8e4a3a; --deck: #e3e7eb; --coam: #98a3ad;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1219; --surface: #121c26; --fg: #e8edf1; --muted: #8d9ca9; --line: #1f2c38;
+      --chip: #1a2733; --chip-sel: #3a2f08; --accent: #e9b824; --accent-fg: #1a1400; --accent-ink: #f0c443;
+      --danger: #ff8a80; --hull: #3d4e5d; --anti: #74392e; --deck: #1d2a36; --coam: #5b6b79;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1219; --surface: #121c26; --fg: #e8edf1; --muted: #8d9ca9; --line: #1f2c38;
+    --chip: #1a2733; --chip-sel: #3a2f08; --accent: #e9b824; --accent-fg: #1a1400; --accent-ink: #f0c443;
+    --danger: #ff8a80; --hull: #3d4e5d; --anti: #74392e; --deck: #1d2a36; --coam: #5b6b79;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; min-width: 0; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.4; margin: 0;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px)); padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    overflow-x: clip;
+  }
+  .wrap { max-width: 720px; margin-inline: auto; display: flex; flex-direction: column; gap: 10px; }
+  h1 { font-size: 1.35rem; margin: 2px 0 0; }
+  h2 { font-size: 0.72rem; font-weight: 600; margin: 0; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
+  .panel { background: var(--surface); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .spread { justify-content: space-between; }
+
+  .cranes { display: grid; grid-template-columns: repeat(4, 1fr) 1.5fr; gap: 6px; }
+  .tog { min-height: 44px; padding: 5px 6px; background: var(--chip); border: 1px solid transparent; border-radius: 9px; cursor: pointer; font-weight: 600; font-size: 1.05rem; }
+  .tog[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+  .tog.shore { font-size: 0.92rem; }
+
+  #ship svg { display: block; width: 100%; height: auto; max-height: 230px; }
+  .hull { fill: var(--hull); } .anti { fill: var(--anti); }
+  .house { fill: var(--deck); stroke: var(--hull); stroke-width: 1.2; } .win { fill: var(--hull); }
+  .hx { cursor: pointer; } .hx:focus { outline: none; }
+  .hx .hit { fill: transparent; }
+  .hx .coam { fill: var(--deck); stroke: var(--coam); stroke-width: 1.2; }
+  .hx .hn { font: 600 10px var(--font-mono); text-anchor: middle; fill: var(--fg); }
+  .hx .hc { font: 600 8.5px var(--font-mono); text-anchor: middle; fill: var(--accent-ink); }
+  .hx.on .coam { fill: var(--accent); stroke: var(--accent-ink); }
+  .hx.on .hn { fill: var(--accent-fg); }
+  .hx:focus-visible .coam { stroke: var(--accent-ink); stroke-width: 2.5; }
+  .end { font: 600 10px var(--font-body); fill: var(--muted); }
+
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  .stepper .slabel { font-size: 0.92rem; flex: 1; }
+  .stepper button { width: 44px; height: 40px; border: 0; border-radius: 9px; background: var(--chip); font-size: 1.3rem; cursor: pointer; }
+  .stepper button:disabled { opacity: 0.35; cursor: default; }
+  .stepper output { min-width: 1.8em; text-align: center; font-family: var(--font-mono); font-size: 1.2rem; font-weight: 600; }
+  .dims { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 4px 16px; }
+
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .tab { flex: none; min-height: 44px; padding: 4px 12px; border: 0; border-radius: 9px; background: var(--chip); cursor: pointer; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+  .tab small { font: 500 0.72rem var(--font-mono); color: var(--muted); }
+  .tab[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+  .tab[aria-pressed="true"] small { color: var(--accent-fg); }
+  .tab.add { font-weight: 500; color: var(--muted); }
+
+  .plan { display: grid; grid-template-columns: 20px minmax(0, 1fr) 20px; gap: 0 6px; align-items: stretch; }
+  .bow { grid-column: 2; position: relative; height: 34px; }
+  .bow svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .bow path { fill: var(--deck); stroke: var(--coam); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .bow span, .aft { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); }
+  .side { writing-mode: vertical-rl; text-orientation: mixed; text-align: center; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); }
+  .side.port { transform: rotate(180deg); }
+  .deck { background: var(--deck); border-left: 1.5px solid var(--coam); border-right: 1.5px solid var(--coam); padding: 8px; }
+  .deckend { grid-column: 2; position: relative; height: 26px; background: var(--deck); border: 1.5px solid var(--coam); border-top: 0; border-radius: 0 0 10px 10px; }
+  .aft { bottom: 5px; }
+  .grid { display: grid; gap: 4px; border: 3px solid var(--coam); border-radius: 4px; padding: 4px; background: var(--bg); }
+  .u { position: relative; min-height: 50px; padding: 15px 2px 4px; border: 1px dashed var(--coam); border-radius: 6px; background: var(--surface); cursor: pointer; font-family: var(--font-mono); font-size: var(--fs, 12px); line-height: 1.15; overflow-wrap: anywhere; text-align: center; }
+  .u .rc { position: absolute; top: 2px; left: 4px; font-size: 9px; color: var(--muted); font-weight: 400; }
+  .dense .u .rc { display: none; }
+  .dense .u { padding-top: 4px; }
+  .u.has { background: var(--chip-sel); border: 1px solid var(--accent-ink); font-weight: 600; }
+  .u.sel { outline: 3px solid var(--accent); outline-offset: 1px; z-index: 1; }
+
+  .pick { min-height: 44px; padding: 6px 26px 6px 10px; background-color: var(--chip); border: 1px solid transparent; border-radius: 9px; -webkit-appearance: none; appearance: none; font-family: var(--font-mono); font-size: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%238d9ca9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; }
+  input[type="text"] { min-height: 44px; padding: 5px 10px; background: var(--chip); border: 1px solid transparent; border-radius: 9px; width: 100%; font-size: 16px; }
+  .parts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .parts .pick, .parts input { flex: 1 1 84px; width: auto; }
+  .dash { font: 700 1.1rem var(--font-mono); color: var(--muted); }
+  .codeprev { font: 700 1.6rem var(--font-mono); letter-spacing: 0.02em; overflow-wrap: anywhere; }
+  .codeprev.blank { color: var(--muted); }
+  .meta { font-size: 0.82rem; color: var(--muted); }
+  #editor { border: 2px solid var(--accent); }
+  .x { width: 44px; height: 40px; border: 0; border-radius: 9px; background: var(--chip); font-size: 1.2rem; cursor: pointer; }
+
+  .small { min-height: 44px; padding: 4px 12px; background: var(--chip); border: 0; border-radius: 9px; cursor: pointer; font-size: 0.92rem; }
+  .primary { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  .grow { flex: 1; }
+  .danger.armed { color: var(--danger); font-weight: 600; }
+  .sumlist { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; }
+  .sumlist b { font-family: var(--font-mono); }
+  .empty { color: var(--muted); }
+  .start { padding: 18px 8px; text-align: center; color: var(--muted); }
+
+  details > summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+  .lists { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .lists label { font-size: 0.8rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+  textarea { width: 100%; min-height: 130px; font-family: var(--font-mono); font-size: 16px; background: var(--chip); border: 0; border-radius: 9px; padding: 8px; }
+  #manual { display: none; flex-direction: column; gap: 6px; }
+  #manual.show { display: flex; }
+  #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 9px; font-size: 0.9rem; opacity: 0; pointer-events: none; transition: opacity 0.15s; max-width: calc(100% - 32px); z-index: 5; }
+  #toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+  @media (max-width: 420px) { .cranes { grid-template-columns: repeat(4, 1fr); } .tog.shore { grid-column: 1 / -1; } }
+</style>
+</head><body>
+<div class="wrap">
+  <h1>Cargo Record</h1>
+
+  <section class="panel" aria-label="Crane">
+    <h2>Crane used</h2>
+    <div class="cranes" id="cranes"></div>
+  </section>
+
+  <section class="panel" aria-label="Hatch">
+    <div class="row spread"><h2>Hatch</h2><span class="meta" id="hatchName">Tap a hatch</span></div>
+    <div id="ship"></div>
+    <div id="hatchStep"></div>
+  </section>
+
+  <section class="panel" id="tierPanel" aria-label="Tier">
+    <div class="row spread"><h2 id="tierTitle">Tier</h2><button class="small danger" id="delTier" type="button">Delete tier</button></div>
+    <div class="tabs" id="tabs"></div>
+    <p class="hint">Tier 1 is the bottom tier. Across = port to starboard, Fore-aft = forward to aft.</p>
+    <div class="dims" id="dims"></div>
+  </section>
+
+  <section class="panel" id="planPanel" aria-label="Hatch plan">
+    <div class="row spread"><h2 id="planTitle">Units</h2><span class="meta" id="planCount"></span></div>
+    <div class="plan" id="plan">
+      <div class="bow"><svg viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 34 V30 C12 10 34 1 50 1 C66 1 88 10 100 30 V34"/></svg><span>&#9650; FWD</span></div>
+      <span class="side port" style="grid-row:2;grid-column:1">PORT</span>
+      <div class="deck" style="grid-row:2;grid-column:2"><div class="grid" id="grid"></div></div>
+      <span class="side" style="grid-row:2;grid-column:3">STBD</span>
+      <div class="deckend" style="grid-row:3"><span class="aft">AFT</span></div>
+    </div>
+  </section>
+
+  <section class="panel" id="editor" aria-label="Unit code" hidden></section>
+
+  <section class="panel" id="startMsg"><div class="start">Pick the crane, then tap a hatch on the ship to start recording.</div></section>
+
+  <section class="panel" aria-label="Record">
+    <div class="row spread"><h2 id="recTitle">Record</h2><button class="small danger" id="clearAll" type="button">Clear all</button></div>
+    <div class="sumlist" id="summary"></div>
+    <div class="row">
+      <button class="small primary grow" id="dlBtn" type="button">Download Excel (.xlsx)</button>
+      <button class="small grow" id="copyBtn" type="button">Copy for Excel</button>
+    </div>
+    <p class="hint">Excel file has two sheets: Record (Hatch, Tier, Row, Col, Cargo code, Crane, Date, Time) and Layout (each tier drawn as a grid, FWD at the top).</p>
+    <div id="manual">
+      <p class="hint">Your phone blocked automatic copying. Press and hold in the box, select all, then copy.</p>
+      <textarea id="manualText" readonly></textarea>
+    </div>
+  </section>
+
+  <section class="panel">
+    <details id="listBox">
+      <summary>Code options (dropdown lists)</summary>
+      <p class="hint">One option per line. Part 1 is the first box of the code, Part 2 the second, and so on. An empty list gives a free-type box.</p>
+      <div class="lists" id="lists"></div>
+      <div class="row" style="margin-top:8px"><button class="small danger" id="resetLists" type="button">Reset to sample lists</button></div>
+    </details>
+  </section>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+{
+  const KEY = 'crt.v1', MAXP = 6;
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const $ = id => document.getElementById(id);
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const esc = s => String(s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+  const clampInt = (v, lo, hi, d) => (Number.isInteger(v) && v >= lo && v <= hi) ? v : d;
+  const fmtDate = ts => { const d = new Date(ts); return pad(d.getDate()) + '-' + MON[d.getMonth()] + '-' + d.getFullYear(); };
+  const fmtTime = ts => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+  const craneName = c => c === 'Shore' ? 'Shore crane' : (c ? 'Crane ' + c : '');
+  // Sample options, edit them under Code options.
+  const defLists = () => [
+    ['YOK', 'TYO', 'KOB', 'NGO', 'OSA', 'SHA', 'BNE', 'SYD', 'MEL'],
+    ['BL', 'PL', 'CL', 'CT', 'BD'],
+    Array.from({ length: 50 }, (_, i) => String(i + 1).padStart(3, '0')),
+    [], [], []
+  ];
+
+  let S = null;
+  try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  if (!S || typeof S !== 'object') S = {};
+  S = {
+    crane: ['1', '2', '3', '4', 'Shore'].indexOf(S.crane) > -1 ? S.crane : null,
+    hatches: clampInt(S.hatches, 1, 11, 5),
+    hatch: clampInt(S.hatch, 1, 11, null),
+    holds: (S.holds && typeof S.holds === 'object') ? S.holds : {},
+    tierSel: (S.tierSel && typeof S.tierSel === 'object') ? S.tierSel : {},
+    lists: (Array.isArray(S.lists) && S.lists.length === MAXP) ? S.lists : defLists(),
+    last: Array.isArray(S.last) ? S.last : [],
+    dim: (S.dim && typeof S.dim === 'object') ? S.dim : { across: 4, rows: 3, ph: 3 }
+  };
+  if (S.hatch && S.hatch > S.hatches) S.hatch = null;
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  let selCell = null, draft = null, dl = null;
+
+  let toastT;
+  function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+  function arm(btn, idle, armed, fn) {
+    let tm;
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('armed')) { clearTimeout(tm); btn.classList.remove('armed'); btn.textContent = idle; fn(); }
+      else { btn.classList.add('armed'); btn.textContent = armed; tm = setTimeout(() => { btn.classList.remove('armed'); btn.textContent = idle; }, 3000); }
+    });
+  }
+
+  const tiers = h => S.holds[h] || (S.holds[h] = []);
+  const newTier = () => ({ across: S.dim.across, rows: S.dim.rows, ph: S.dim.ph, cells: {} });
+  const nCells = t => Object.keys(t.cells).length;
+  const hatchCount = h => (S.holds[h] || []).reduce((s, t) => s + nCells(t), 0);
+  function tierIdx() {
+    const t = tiers(S.hatch);
+    if (!t.length) t.push(newTier());
+    let i = S.tierSel[S.hatch];
+    if (!(i >= 0 && i < t.length)) i = S.tierSel[S.hatch] = t.length - 1;
+    return i;
+  }
+  const curTier = () => S.hatch ? tiers(S.hatch)[tierIdx()] : null;
+
+  function stepper(label, key, val, min, max) {
+    return '<div class="stepper"><span class="slabel">' + label + '</span>' +
+      '<button type="button" data-st="' + key + '" data-d="-1"' + (val <= min ? ' disabled' : '') + ' aria-label="Less: ' + label + '">&minus;</button>' +
+      '<output>' + val + '</output>' +
+      '<button type="button" data-st="' + key + '" data-d="1"' + (val >= max ? ' disabled' : '') + ' aria-label="More: ' + label + '">+</button></div>';
+  }
+
+  function renderCranes() {
+    $('cranes').innerHTML = ['1', '2', '3', '4', 'Shore'].map(c =>
+      '<button type="button" class="tog' + (c === 'Shore' ? ' shore' : '') + '" data-c="' + c + '" aria-pressed="' + (S.crane === c) + '">' + (c === 'Shore' ? 'Shore crane' : c) + '</button>').join('');
+  }
+
+  const HULL = 'M8 48 H314 L332 38 H354 L344 96 Q340 110 322 110 H40 Q20 110 16 96 L8 66 Z';
+  function renderShip() {
+    const n = S.hatches, x0 = 66, x1 = 318, gap = 3, w = (x1 - x0 - gap * (n - 1)) / n;
+    let hs = '';
+    for (let k = 0; k < n; k++) {
+      const num = n - k, x = x0 + k * (w + gap), cnt = hatchCount(num), on = S.hatch === num;
+      hs += '<g class="hx' + (on ? ' on' : '') + '" data-h="' + num + '" role="button" tabindex="0" aria-pressed="' + on + '" aria-label="Hatch ' + num + (cnt ? ', ' + cnt + ' units' : '') + '">' +
+        '<rect class="hit" x="' + x + '" y="4" width="' + w + '" height="64"/>' +
+        '<rect class="coam" x="' + x + '" y="26" width="' + w + '" height="22" rx="2"/>' +
+        '<text class="hn" x="' + (x + w / 2) + '" y="40.5">' + num + '</text>' +
+        (cnt ? '<text class="hc" x="' + (x + w / 2) + '" y="20">' + cnt + '</text>' : '') + '</g>';
+    }
+    let wins = '';
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) wins += '<rect class="win" x="' + (19 + c * 8.5) + '" y="' + (18 + r * 9) + '" width="5" height="4" rx="1"/>';
+    $('ship').innerHTML = '<svg viewBox="0 0 360 130" role="group" aria-label="Ship side view, aft on the left, bow on the right">' +
+      '<defs><clipPath id="hullc"><path d="' + HULL + '"/></clipPath></defs>' +
+      '<path class="hull" d="' + HULL + '"/>' +
+      '<rect class="anti" x="0" y="88" width="360" height="30" clip-path="url(#hullc)"/>' +
+      '<rect class="hull" x="24" y="2" width="12" height="11" rx="1"/>' +
+      '<rect class="house" x="14" y="12" width="40" height="36" rx="2"/>' + wins + hs +
+      '<text class="end" x="8" y="126">&#9664; AFT</text><text class="end" x="354" y="126" text-anchor="end">FWD &#9654;</text></svg>';
+    $('hatchName').textContent = S.hatch ? 'Hatch ' + S.hatch : 'Tap a hatch';
+    $('hatchStep').innerHTML = stepper('Hatches on this ship', 'hatches', S.hatches, 1, 11);
+  }
+
+  function renderTier() {
+    const on = !!S.hatch;
+    $('tierPanel').hidden = !on; $('planPanel').hidden = !on; $('startMsg').hidden = on;
+    if (!on) { $('editor').hidden = true; return; }
+    const ts = tiers(S.hatch), i = tierIdx(), tr = ts[i];
+    $('tierTitle').textContent = 'Hatch ' + S.hatch + ' tiers';
+    $('tabs').innerHTML = ts.map((t, j) =>
+      '<button type="button" class="tab" data-t="' + j + '" aria-pressed="' + (j === i) + '">Tier ' + (j + 1) + '<small>' + nCells(t) + '/' + (t.across * t.rows) + '</small></button>').join('') +
+      '<button type="button" class="tab add" id="addTier">+ Tier</button>';
+    $('dims').innerHTML = stepper('Units across', 'across', tr.across, 1, 12) + stepper('Units fore-aft', 'rows', tr.rows, 1, 12) + stepper('Code parts (new units)', 'ph', tr.ph, 1, MAXP);
+    $('planTitle').textContent = 'Hatch ' + S.hatch + ' · Tier ' + (i + 1);
+    $('planCount').textContent = nCells(tr) + ' of ' + (tr.across * tr.rows) + ' recorded';
+    const g = $('grid');
+    g.style.gridTemplateColumns = 'repeat(' + tr.across + ', minmax(0, 1fr))';
+    g.style.setProperty('--fs', tr.across <= 4 ? '13px' : tr.across <= 6 ? '11.5px' : tr.across <= 8 ? '10px' : '9px');
+    $('plan').classList.toggle('dense', tr.across > 7);
+    let h = '';
+    for (let r = 0; r < tr.rows; r++) for (let c = 0; c < tr.across; c++) {
+      const k = r + '-' + c, cell = tr.cells[k];
+      h += '<button type="button" class="u' + (cell ? ' has' : '') + (selCell === k ? ' sel' : '') + '" data-k="' + k + '" aria-label="Row ' + (r + 1) + ' col ' + (c + 1) + (cell ? ': ' + esc(cell.code) : ', empty') + '">' +
+        '<span class="rc">' + (r + 1) + '.' + (c + 1) + '</span>' + (cell ? esc(cell.code).replace(/-/g, '-<wbr>') : '') + '</button>';
+    }
+    g.innerHTML = h;
+  }
+
+  function advance(parts, ph) {
+    const p = parts.slice(0, ph); while (p.length < ph) p.push('');
+    const i = ph - 1, v = p[i], list = S.lists[i] || [], at = list.indexOf(v);
+    if (at > -1 && at < list.length - 1) p[i] = list[at + 1];
+    else if (/^\d+$/.test(v)) p[i] = String(+v + 1).padStart(v.length, '0');
+    return p;
+  }
+  function openCell(k) {
+    const tr = curTier(); selCell = k;
+    const cell = tr.cells[k];
+    if (cell) draft = { ph: cell.ph, parts: cell.parts ? cell.parts.slice() : [], custom: cell.parts ? '' : cell.code };
+    else draft = { ph: tr.ph, parts: S.last.length ? advance(S.last, tr.ph) : Array(tr.ph).fill(''), custom: '' };
+  }
+  const draftCode = () => draft.custom.trim() || draft.parts.slice(0, draft.ph).map(x => x || '_').join('-');
+  const draftOk = () => !!draft.custom.trim() || draft.parts.slice(0, draft.ph).every(x => x && x.trim());
+
+  function renderEditor() {
+    const tr = curTier(), box = $('editor');
+    if (!tr || !selCell || !draft) { box.hidden = true; return; }
+    box.hidden = false;
+    const [r, c] = selCell.split('-').map(Number), cell = tr.cells[selCell];
+    while (draft.parts.length < draft.ph) draft.parts.push('');
+    let parts = '';
+    for (let i = 0; i < draft.ph; i++) {
+      if (i) parts += '<span class="dash">-</span>';
+      const list = S.lists[i] || [], v = draft.parts[i] || '';
+      if (list.length) {
+        const opts = (v && list.indexOf(v) === -1 ? [v] : []).concat(list);
+        parts += '<select class="pick" data-p="' + i + '" aria-label="Code part ' + (i + 1) + '"><option value="">—</option>' +
+          opts.map(o => '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>';
+      } else {
+        parts += '<input type="text" data-p="' + i + '" value="' + esc(v) + '" placeholder="Part ' + (i + 1) + '" aria-label="Code part ' + (i + 1) + '" autocomplete="off" autocapitalize="characters">';
+      }
+    }
+    box.innerHTML =
+      '<div class="row spread"><h2>Hatch ' + S.hatch + ' · Tier ' + (tierIdx() + 1) + ' · Row ' + (r + 1) + ', Col ' + (c + 1) + '</h2><button type="button" class="x" id="edClose" aria-label="Close">&times;</button></div>' +
+      stepper('Code parts', 'uph', draft.ph, 1, MAXP) +
+      '<div class="parts" id="parts">' + parts + '</div>' +
+      '<input type="text" id="custom" value="' + esc(draft.custom) + '" placeholder="Or type the full code" autocomplete="off" autocapitalize="characters" aria-label="Full code">' +
+      '<div class="codeprev" id="codeprev"></div>' +
+      '<div class="meta">' + (cell ? 'Recorded ' + fmtDate(cell.ts) + ' ' + fmtTime(cell.ts) + ' · ' + craneName(cell.crane) : 'Will record with ' + (S.crane ? craneName(S.crane) : 'no crane selected')) + '</div>' +
+      '<div class="row"><button type="button" class="small primary grow" id="saveNext">Save &amp; next</button><button type="button" class="small" id="saveOne">Save</button>' +
+      (cell ? '<button type="button" class="small danger" id="clearUnit">Clear unit</button>' : '') + '</div>';
+    renderPreview();
+    const cu = $('clearUnit');
+    if (cu) arm(cu, 'Clear unit', 'Tap again', () => { delete tr.cells[selCell]; save(); openCell(selCell); renderAll(); });
+  }
+  function renderPreview() {
+    const p = $('codeprev'); if (!p) return;
+    p.textContent = draftCode(); p.classList.toggle('blank', !draftOk());
+  }
+
+  function nextEmpty(tr, from) {
+    const [r0, c0] = from.split('-').map(Number);
+    for (let s = r0 * tr.across + c0 + 1; s < tr.rows * tr.across; s++) {
+      const k = Math.floor(s / tr.across) + '-' + (s % tr.across);
+      if (!tr.cells[k]) return k;
+    }
+    return null;
+  }
+  function saveUnit(next) {
+    if (!S.crane) { toast('Select the crane first'); return; }
+    if (!draftOk()) { toast('Pick every part of the code'); return; }
+    const tr = curTier(), custom = draft.custom.trim();
+    tr.cells[selCell] = { code: draftCode(), parts: custom ? null : draft.parts.slice(0, draft.ph), ph: draft.ph, crane: S.crane, ts: Date.now() };
+    if (!custom) S.last = draft.parts.slice(0, draft.ph);
+    save();
+    const code = tr.cells[selCell].code;
+    if (next) {
+      const k = nextEmpty(tr, selCell);
+      if (k) { openCell(k); toast('Saved ' + code); }
+      else { selCell = null; draft = null; toast('Saved ' + code + '. No empty units left after this one'); }
+    } else toast('Saved ' + code);
+    renderAll();
+  }
+
+  function allRows() {
+    const out = [];
+    for (let h = 1; h <= 11; h++) (S.holds[h] || []).forEach((t, ti) => {
+      for (let r = 0; r < t.rows; r++) for (let c = 0; c < t.across; c++) {
+        const cell = t.cells[r + '-' + c];
+        if (cell) out.push({ h, t: ti + 1, r: r + 1, c: c + 1, code: cell.code, crane: craneName(cell.crane), date: fmtDate(cell.ts), time: fmtTime(cell.ts) });
+      }
+    });
+    return out;
+  }
+  function renderRecord() {
+    const rows = allRows();
+    $('recTitle').textContent = 'Record (' + rows.length + ' units)';
+    $('clearAll').hidden = !rows.length;
+    let h = '';
+    for (let n = 1; n <= 11; n++) {
+      const ts = (S.holds[n] || []).filter(t => nCells(t));
+      if (!ts.length) continue;
+      h += '<div><b>Hatch ' + n + '</b>: ' + (S.holds[n]).map((t, i) => 'T' + (i + 1) + ' ' + nCells(t) + '/' + (t.across * t.rows)).join(' · ') + '</div>';
+    }
+    $('summary').innerHTML = h || '<div class="empty">Nothing recorded yet.</div>';
+  }
+
+  function renderLists() {
+    $('lists').innerHTML = S.lists.map((l, i) => '<label>Part ' + (i + 1) + '<textarea data-l="' + i + '" spellcheck="false" autocapitalize="characters">' + esc(l.join('\n')) + '</textarea></label>').join('');
+  }
+
+  function renderAll() { renderCranes(); renderShip(); renderTier(); renderEditor(); renderRecord(); }
+
+  // Events
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button, .hx');
+    if (!b) return;
+    if (b.dataset.c) { S.crane = b.dataset.c; save(); renderCranes(); if (selCell) renderEditor(); return; }
+    if (b.dataset.h) { pickHatch(+b.dataset.h); return; }
+    if (b.dataset.t) { S.tierSel[S.hatch] = +b.dataset.t; selCell = null; draft = null; save(); renderAll(); return; }
+    if (b.id === 'addTier') { const ts = tiers(S.hatch), last = ts[ts.length - 1]; ts.push({ across: last.across, rows: last.rows, ph: last.ph, cells: {} }); S.tierSel[S.hatch] = ts.length - 1; selCell = null; draft = null; save(); renderAll(); toast('Tier ' + ts.length + ' added'); return; }
+    if (b.dataset.k) { openCell(b.dataset.k); renderTier(); renderEditor(); $('editor').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
+    if (b.dataset.st) { step(b.dataset.st, +b.dataset.d); return; }
+    if (b.id === 'edClose') { selCell = null; draft = null; renderTier(); renderEditor(); return; }
+    if (b.id === 'saveNext') { saveUnit(true); return; }
+    if (b.id === 'saveOne') { saveUnit(false); return; }
+  });
+  $('ship').addEventListener('keydown', e => {
+    const g = e.target.closest('.hx');
+    if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pickHatch(+g.dataset.h); }
+  });
+  function pickHatch(n) {
+    S.hatch = n; selCell = null; draft = null; save(); renderAll();
+  }
+  function step(key, d) {
+    if (key === 'hatches') {
+      const v = S.hatches + d;
+      if (v < 1 || v > 11) return;
+      if (d < 0 && hatchCount(S.hatches)) { toast('Hatch ' + S.hatches + ' has codes. Clear them first'); return; }
+      if (d < 0) { delete S.holds[S.hatches]; delete S.tierSel[S.hatches]; if (S.hatch === S.hatches) { S.hatch = null; selCell = null; } }
+      S.hatches = v; save(); renderAll(); return;
+    }
+    if (key === 'uph') { const v = draft.ph + d; if (v >= 1 && v <= MAXP) { draft.ph = v; renderEditor(); } return; }
+    const tr = curTier(); if (!tr) return;
+    const v = tr[key] + d, max = key === 'ph' ? MAXP : 12;
+    if (v < 1 || v > max) return;
+    if (d < 0 && (key === 'across' || key === 'rows')) {
+      const used = Object.keys(tr.cells).some(k => { const [r, c] = k.split('-').map(Number); return key === 'across' ? c >= v : r >= v; });
+      if (used) { toast('Clear the codes in the last ' + (key === 'across' ? 'column' : 'row') + ' first'); return; }
+      if (selCell) { const [r, c] = selCell.split('-').map(Number); if ((key === 'across' ? c : r) >= v) { selCell = null; draft = null; } }
+    }
+    tr[key] = v; S.dim[key] = v; save(); renderAll();
+  }
+  document.addEventListener('change', e => {
+    const t = e.target;
+    if (t.matches('select[data-p]')) { draft.parts[+t.dataset.p] = t.value; renderPreview(); }
+    if (t.matches('textarea[data-l]')) {
+      const seen = {};
+      S.lists[+t.dataset.l] = t.value.split(/[\n,]+/).map(x => x.trim()).filter(x => x && !seen[x] && (seen[x] = 1));
+      save(); renderLists(); renderEditor(); toast('Part ' + (+t.dataset.l + 1) + ' list saved');
+    }
+  });
+  document.addEventListener('input', e => {
+    const t = e.target;
+    if (t.matches('input[data-p]')) { draft.parts[+t.dataset.p] = t.value.trim().toUpperCase(); renderPreview(); }
+    if (t.id === 'custom') { draft.custom = t.value.toUpperCase(); renderPreview(); }
+  });
+  arm($('delTier'), 'Delete tier', 'Tap again to delete', () => {
+    const ts = tiers(S.hatch), i = tierIdx();
+    ts.splice(i, 1); S.tierSel[S.hatch] = Math.max(0, i - 1); selCell = null; draft = null; save(); renderAll(); toast('Tier deleted');
+  });
+  arm($('clearAll'), 'Clear all', 'Tap again to clear', () => {
+    S.holds = {}; S.tierSel = {}; S.hatch = null; S.last = []; selCell = null; draft = null; save(); renderAll(); toast('Record cleared');
+  });
+  arm($('resetLists'), 'Reset to sample lists', 'Tap again to reset', () => { S.lists = defLists(); save(); renderLists(); renderEditor(); toast('Lists reset'); });
+
+  // Copy for Excel
+  const HEAD = ['Hatch', 'Tier', 'Row', 'Col', 'Cargo code', 'Crane', 'Date', 'Time'];
+  $('copyBtn').addEventListener('click', () => {
+    const rows = allRows();
+    if (!rows.length) { toast('Nothing to copy yet'); return; }
+    const text = [HEAD.join('\t')].concat(rows.map(x => [x.h, x.t, x.r, x.c, x.code, x.crane, x.date, x.time].join('\t'))).join('\n');
+    const fallback = () => { const ta = $('manualText'); ta.value = text; $('manual').classList.add('show'); ta.focus(); ta.select(); };
+    try { navigator.clipboard.writeText(text).then(() => { $('manual').classList.remove('show'); toast('Copied ' + rows.length + ' units'); }, fallback); } catch (e) { fallback(); }
+  });
+
+  // Excel file, built in the page so it works without internet.
+  const enc = new TextEncoder();
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zip(files) {
+    const parts = [], cd = []; let off = 0;
+    const d = new Date(), dt = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), dd = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    files.forEach(f => {
+      const nm = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(10, dt, true); h.setUint16(12, dd, true);
+      h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nm.length, true);
+      parts.push(new Uint8Array(h.buffer), nm, data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(12, dt, true); c.setUint16(14, dd, true);
+      c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+      cd.push(new Uint8Array(c.buffer), nm);
+      off += 30 + nm.length + data.length;
+    });
+    const cdSize = cd.reduce((s, a) => s + a.length, 0), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdSize, true); e.setUint32(16, off, true);
+    return new Blob(parts.concat(cd, [new Uint8Array(e.buffer)]));
+  }
+  const xesc = s => String(s).replace(/[<>&"]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[m])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+  function colL(i) { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  function sheetXml(rows, widths) {
+    let x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+    x += '<cols>' + widths.map((w, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>').join('') + '</cols><sheetData>';
+    rows.forEach((row, ri) => {
+      x += '<row r="' + (ri + 1) + '">';
+      row.forEach((cell, ci) => {
+        if (cell == null || cell === '') return;
+        const o = typeof cell === 'object' ? cell : { v: cell }, ref = colL(ci) + (ri + 1), st = o.s ? ' s="' + o.s + '"' : '';
+        if (o.v === '') x += '<c r="' + ref + '"' + st + '/>';
+        else if (typeof o.v === 'number') x += '<c r="' + ref + '"' + st + '><v>' + o.v + '</v></c>';
+        else x += '<c r="' + ref + '"' + st + ' t="inlineStr"><is><t xml:space="preserve">' + xesc(o.v) + '</t></is></c>';
+      });
+      x += '</row>';
+    });
+    return x + '</sheetData></worksheet>';
+  }
+  const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>' +
+    '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFFFE08A"/><bgColor indexed="64"/></patternFill></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF4CC"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+    '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF8C8C8C"/></left><right style="thin"><color rgb="FF8C8C8C"/></right><top style="thin"><color rgb="FF8C8C8C"/></top><bottom style="thin"><color rgb="FF8C8C8C"/></bottom><diagonal/></border></borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5">' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+    '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+    '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf>' +
+    '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+    '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  function buildXlsx() {
+    const rows = allRows();
+    const rec = [HEAD.map(v => ({ v, s: 1 }))].concat(rows.map(x => [x.h, x.t, x.r, x.c, x.code, x.crane, x.date, x.time]));
+    const lay = []; let maxA = 1;
+    for (let h = 1; h <= 11; h++) (S.holds[h] || []).forEach((t, ti) => {
+      if (!nCells(t)) return;
+      maxA = Math.max(maxA, t.across);
+      const mid = Math.floor((t.across - 1) / 2) + 1;
+      lay.push([{ v: 'Hatch ' + h + ' - Tier ' + (ti + 1), s: 1 }]);
+      const fw = []; fw[mid] = { v: 'FWD', s: 3 }; lay.push(fw);
+      lay.push([''].concat(Array.from({ length: t.across }, (_, c) => ({ v: c === 0 ? 'Col 1 (Port)' : c === t.across - 1 ? 'Col ' + t.across + ' (Stbd)' : 'Col ' + (c + 1), s: 3 }))));
+      for (let r = 0; r < t.rows; r++) {
+        const line = [{ v: 'Row ' + (r + 1), s: 3 }];
+        for (let c = 0; c < t.across; c++) { const cell = t.cells[r + '-' + c]; line.push(cell ? { v: cell.code, s: 4 } : { v: '', s: 2 }); }
+        lay.push(line);
+      }
+      const af = []; af[mid] = { v: 'AFT', s: 3 }; lay.push(af);
+      lay.push([]);
+    });
+    const ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+      '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+    const rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    const wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Record" sheetId="1" r:id="rId1"/><sheet name="Layout" sheetId="2" r:id="rId2"/></sheets></workbook>';
+    const wbr = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>' +
+      '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    return zip([
+      { name: '[Content_Types].xml', data: ct }, { name: '_rels/.rels', data: rels },
+      { name: 'xl/workbook.xml', data: wb }, { name: 'xl/_rels/workbook.xml.rels', data: wbr },
+      { name: 'xl/styles.xml', data: STYLES },
+      { name: 'xl/worksheets/sheet1.xml', data: sheetXml(rec, [8, 6, 6, 6, 24, 13, 13, 8]) },
+      { name: 'xl/worksheets/sheet2.xml', data: sheetXml(lay, [16].concat(Array(maxA).fill(15))) }
+    ]);
+  }
+  $('dlBtn').addEventListener('click', () => {
+    if (!allRows().length) { toast('Nothing to export yet'); return; }
+    const d = new Date(), name = 'Cargo_Record_' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + '.xlsx';
+    if (!dl) {
+      const url = URL.createObjectURL(new Blob([buildXlsx()], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000); toast('Excel file downloaded'); return;
+    }
+    dl.save({ filename: name, data: buildXlsx() }).then(() => toast('Excel file saved'), err => {
+      if (err && err.code === 'declined') return;
+      if (err && err.code === 'rate_limited') { toast('Please wait a moment and try again'); return; }
+      toast('Download not available here. Use Copy for Excel');
+    });
+  });
+  (async () => {
+    try { if (window.claude && typeof claude.use === 'function') { dl = await claude.use('downloads'); if (dl) $('dlBtn').hidden = false; } } catch (e) {}
+  })();
+
+  renderLists(); renderAll();
+}
+</script>
+</body></html>

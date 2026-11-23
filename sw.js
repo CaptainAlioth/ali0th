@@ -1,7 +1,11 @@
-var CACHE = 'pwl-v5';
-var FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+var CACHE = 'pwl-v6';
+// File names must match the repository exactly (GitHub Pages is case-sensitive: .PNG not .png).
+var FILES = ['./', './index.html', './cargo-record.html', './manifest.webmanifest', './icon-192.PNG', './icon-512.PNG'];
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));
+  // Each file is saved on its own, so one missing file can no longer stop the whole offline copy.
+  e.waitUntil(caches.open(CACHE).then(function (c) {
+    return Promise.all(FILES.map(function (f) { return c.add(f).catch(function () {}); }));
+  }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) {
@@ -14,7 +18,11 @@ self.addEventListener('fetch', function (e) {
     var net = fetch(e.request).then(function (r) {
       if (r && r.ok) { var cp = r.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, cp); }); }
       return r;
-    }).catch(function () { return hit || caches.match('./index.html'); });
+    }).catch(function () {
+      if (hit) return hit;
+      // Offline and not saved yet: open the matching app rather than always the Port Watch Log.
+      return /cargo-record/.test(e.request.url) ? caches.match('./cargo-record.html') : caches.match('./index.html');
+    });
     return hit || net;
   }));
 });

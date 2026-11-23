@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cargo Record</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cargo Record">
+<link rel="apple-touch-icon" href="icon-192.PNG">
+<link rel="icon" href="icon-192.PNG">
 <style>
   /* VOICE: same quiet working tool as the Port Watch Log, flat panels, one yellow accent.
      IDEA: a ship's cargo plan: side profile to pick the hatch, plan view of the hatch to record each unit.
@@ -605,6 +609,7 @@
   })();
 
   renderLists(); renderAll();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(function () {});
 }
 </script>
 </body></html>

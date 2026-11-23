@@ -122,6 +122,17 @@
   .meta { font-size: 0.82rem; color: var(--muted); }
   #editor { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; max-width: 720px; margin-inline: auto; max-height: 58vh; overflow-y: auto; border: 2px solid var(--accent); border-bottom: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -8px 24px rgb(0 0 0 / 0.25); padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
   body.sheet { padding-bottom: 62vh; }
+  /* Nothing in the code panel may shrink: when it is taller than its space, the panel scrolls up and down instead. */
+  #editor > * { flex-shrink: 0; }
+  .swatches { min-height: 48px; }
+  .sublabel { font-size: 0.92rem; }
+  /* One sliding row of colours; the edges fade so the next colours peek in at either side. */
+  .swatches { display: flex; gap: 8px; overflow-x: auto; padding: 4px 16px; scroll-padding-inline: 16px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%); }
+  .swatches::-webkit-scrollbar { display: none; }
+  .sw { flex: none; width: 40px; height: 40px; scroll-snap-align: center; border-radius: 50%; border: 2px solid transparent; background: var(--c); cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); }
+  .sw.none { background: var(--chip); color: var(--muted); font-size: 1.1rem; }
+  .sw[aria-pressed="true"] { border-color: var(--fg); box-shadow: inset 0 0 0 3px var(--surface); }
   .phpick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .phpick button { display: flex; flex-direction: column; align-items: center; gap: 0; min-height: 54px; }
   .phpick b { font-size: 1.1rem; }
@@ -192,7 +203,7 @@
       <button class="small primary grow" id="dlBtn" type="button">Download Excel (.xlsx)</button>
       <button class="small grow" id="copyBtn" type="button">Copy for Excel</button>
     </div>
-    <p class="hint">Excel file has two sheets: Record (Hatch, Tier, Row, Col, Cargo code, Crane, Date, Time) and Layout (each tier drawn as a grid, FWD at the top).</p>
+    <p class="hint">Excel file has two sheets: Record (Hatch, Tier, Row, Col, Cargo code, Colour, Crane, Date, Time) and Layout (each tier as a grid: port on top, starboard at the bottom, aft on the left; units filled in their colour).</p>
     <div id="manual">
       <p class="hint">Your phone blocked automatic copying. Press and hold in the box, select all, then copy.</p>
       <textarea id="manualText" readonly></textarea>
@@ -222,6 +233,22 @@
   const fmtTime = ts => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   const craneName = c => c === 'Shore' ? 'Shore crane' : (c ? 'Crane ' + c : '');
   const MAXD = 100;
+  // 24 unit colours: name and hex. Index is what is stored on each unit.
+  const COLOURS = [
+    ['Red', '#E53935'], ['Coral', '#FF7F6E'], ['Orange', '#FB8C00'], ['Amber', '#FFB300'],
+    ['Yellow', '#FDD835'], ['Lime', '#C0CA33'], ['Light green', '#7CB342'], ['Green', '#43A047'],
+    ['Mint', '#4DD0A1'], ['Teal', '#00897B'], ['Cyan', '#00ACC1'], ['Sky blue', '#4FC3F7'],
+    ['Blue', '#1E88E5'], ['Navy', '#283593'], ['Indigo', '#5C6BC0'], ['Lavender', '#B39DDB'],
+    ['Violet', '#7E57C2'], ['Purple', '#8E24AA'], ['Magenta', '#D81B60'], ['Pink', '#F06292'],
+    ['Brown', '#8D6E63'], ['Sand', '#D7C49E'], ['Grey', '#9E9E9E'], ['Charcoal', '#37474F']
+  ];
+  const isCol = i => Number.isInteger(i) && i >= 0 && i < COLOURS.length;
+  // Dark text on light colours, white text on dark ones.
+  function inkOn(hex) {
+    const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const L = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    return L > 0.6 ? '#1b222a' : '#ffffff';
+  }
   // Code lists start empty. Codes are added with "+ New code" and kept until changed under Code options.
   const defLists = () => [[], [], [], [], [], []];
   // The sample lists shipped in the first version, cleared on update unless the user changed them.
@@ -246,6 +273,7 @@
     lists: (Array.isArray(S.lists) && S.lists.length === MAXP) ? S.lists : defLists(),
     last: Array.isArray(S.last) ? S.last : [],
     ph: clampInt(S.ph, 1, MAXP, null), // number of code parts: none until chosen, then kept until changed
+    color: Number.isInteger(S.color) && S.color >= 0 && S.color < 24 ? S.color : null, // last colour chosen, kept until changed
     dim: (S.dim && typeof S.dim === 'object') ? S.dim : { across: 4, rows: 3, ph: 3 }
   };
   if (firstRun) {
@@ -349,7 +377,9 @@
   }
   function cellHtml(k, cell) {
     const [r, c] = k.split('-').map(Number);
-    return '<button type="button" class="u' + (cell ? ' has' : '') + (selCell === k ? ' sel' : '') + '" data-k="' + k + '" aria-label="Row ' + (r + 1) + ' col ' + (c + 1) + (cell ? ': ' + esc(cell.code) : ', empty') + '">' +
+    const col = cell && isCol(cell.color) ? COLOURS[cell.color] : null;
+    const st = col ? ' style="background:' + col[1] + ';border-color:' + col[1] + ';color:' + inkOn(col[1]) + '"' : '';
+    return '<button type="button" class="u' + (cell ? ' has' : '') + (selCell === k ? ' sel' : '') + '"' + st + ' data-k="' + k + '" aria-label="Row ' + (r + 1) + ' col ' + (c + 1) + (cell ? ': ' + esc(cell.code) + (col ? ', ' + col[0] : '') : ', empty') + '">' +
       (cell ? esc(cell.code).replace(/-/g, '-<wbr>') : '') + '</button>';
   }
   function buildGrid(tr) {
@@ -396,8 +426,8 @@
   function openCell(k) {
     const tr = curTier(); selCell = k;
     const cell = tr.cells[k];
-    if (cell) draft = { ph: cell.ph, parts: cell.parts ? cell.parts.slice() : [], custom: cell.parts ? '' : cell.code, adding: {} };
-    else draft = { ph: S.ph, parts: startParts(S.ph), custom: '', adding: {} };
+    if (cell) draft = { ph: cell.ph, parts: cell.parts ? cell.parts.slice() : [], custom: cell.parts ? '' : cell.code, adding: {}, color: isCol(cell.color) ? cell.color : null };
+    else draft = { ph: S.ph, parts: startParts(S.ph), custom: '', adding: {}, color: S.color };
   }
   const draftCode = () => draft.custom.trim() || draft.parts.slice(0, draft.ph).map(x => x || '_').join('-');
   const draftOk = () => !!draft.custom.trim() || draft.parts.slice(0, draft.ph).every(x => x && x.trim());
@@ -435,12 +465,24 @@
       '<div class="parts" id="parts">' + parts + '</div>' +
       '<input type="text" id="custom" value="' + esc(draft.custom) + '" placeholder="Or type the full code" autocomplete="off" autocapitalize="characters" aria-label="Full code">' +
       '<div class="codeprev" id="codeprev"></div>' +
+      '<div class="row spread"><span class="sublabel">Colour <span class="meta">(slide for more)</span></span><span class="meta" id="colName">' + (isCol(draft.color) ? COLOURS[draft.color][0] : 'None') + '</span></div>' +
+      '<div class="swatches" id="swatches">' +
+        '<button type="button" class="sw none" data-col="-1" aria-label="No colour" aria-pressed="' + !isCol(draft.color) + '">&#8856;</button>' +
+        COLOURS.map((cl, i) => '<button type="button" class="sw" data-col="' + i + '" style="--c:' + cl[1] + '" aria-label="' + cl[0] + '" aria-pressed="' + (draft.color === i) + '"></button>').join('') +
+      '</div>' +
       '<div class="meta">' + (cell ? 'Recorded ' + fmtDate(cell.ts) + ' ' + fmtTime(cell.ts) + ' · ' + craneName(cell.crane) : 'Will record with ' + (S.crane ? craneName(S.crane) : 'no crane selected')) + '</div>' +
       '<div class="row"><button type="button" class="small primary grow" id="saveNext">Save &amp; next</button><button type="button" class="small" id="saveOne">Save</button>' +
       (cell ? '<button type="button" class="small danger" id="clearUnit">Clear unit</button>' : '') + '</div>';
     renderPreview();
+    centerSwatch(false);
     const cu = $('clearUnit');
     if (cu) arm(cu, 'Clear unit', 'Tap again', () => { delete tr.cells[selCell]; save(); openCell(selCell); renderAll(); paintCell(selCell); });
+  }
+  function centerSwatch(smooth) {
+    const strip = $('swatches'), on = strip && strip.querySelector('[aria-pressed="true"]');
+    if (!on) return;
+    const left = on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2;
+    strip.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
   }
   function addToList(i, v) {
     v = String(v || '').trim().toUpperCase();
@@ -483,7 +525,7 @@
     if (!draftOk()) { toast('Pick every part of the code'); return; }
     const tr = curTier(), custom = draft.custom.trim(), savedK = selCell;
     if (!custom) { draft.parts.slice(0, draft.ph).forEach((v, i) => addToList(i, v)); renderLists(); }
-    tr.cells[selCell] = { code: draftCode(), parts: custom ? null : draft.parts.slice(0, draft.ph), ph: draft.ph, crane: S.crane, ts: Date.now() };
+    tr.cells[selCell] = { code: draftCode(), parts: custom ? null : draft.parts.slice(0, draft.ph), ph: draft.ph, color: isCol(draft.color) ? draft.color : null, crane: S.crane, ts: Date.now() };
     if (!custom) S.last = draft.parts.slice(0, draft.ph);
     save();
     const code = tr.cells[selCell].code;
@@ -504,7 +546,7 @@
     for (let h = 1; h <= 11; h++) (S.holds[h] || []).forEach((t, ti) => {
       for (let r = 0; r < t.rows; r++) for (let c = 0; c < t.across; c++) {
         const cell = t.cells[r + '-' + c];
-        if (cell) out.push({ h, t: ti + 1, r: r + 1, c: c + 1, code: cell.code, crane: craneName(cell.crane), date: fmtDate(cell.ts), time: fmtTime(cell.ts) });
+        if (cell) out.push({ h, t: ti + 1, r: r + 1, c: c + 1, code: cell.code, color: isCol(cell.color) ? cell.color : null, colName: isCol(cell.color) ? COLOURS[cell.color][0] : '', crane: craneName(cell.crane), date: fmtDate(cell.ts), time: fmtTime(cell.ts) });
       }
     });
     return out;
@@ -538,6 +580,13 @@
     if (b.id === 'addTier') { const ts = tiers(S.hatch), last = ts[ts.length - 1]; ts.push({ across: last.across, rows: last.rows, cells: {} }); S.tierSel[S.hatch] = ts.length - 1; selCell = null; draft = null; save(); renderAll(); toast('Tier ' + ts.length + ' added'); return; }
     if (b.dataset.k) { const prev = selCell;
       if (prev) { const [pr, pc] = prev.split('-').map(Number), [nr, nc] = b.dataset.k.split('-').map(Number); if (pr === nr && pc !== nc) moveDir = Math.sign(nc - pc); } openCell(b.dataset.k); showSel(prev); renderEditor(); revealSel(); return; }
+    if (b.dataset.col) {
+      const i = +b.dataset.col; draft.color = i >= 0 ? i : null; S.color = draft.color; save();
+      document.querySelectorAll('#swatches .sw').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.col === (draft.color == null ? -1 : draft.color))));
+      $('colName').textContent = draft.color == null ? 'None' : COLOURS[draft.color][0];
+      centerSwatch(true);
+      return;
+    }
     if (b.dataset.php) {
       const n = +b.dataset.php; S.ph = n; save();
       draft.ph = n; draft.parts = startParts(n); renderEditor(); revealSel(); return;
@@ -622,11 +671,11 @@
   arm($('resetLists'), 'Clear all code lists', 'Tap again to clear lists', () => { S.lists = defLists(); save(); renderLists(); renderEditor(); toast('Code lists cleared'); });
 
   // Copy for Excel
-  const HEAD = ['Hatch', 'Tier', 'Row', 'Col', 'Cargo code', 'Crane', 'Date', 'Time'];
+  const HEAD = ['Hatch', 'Tier', 'Row', 'Col', 'Cargo code', 'Colour', 'Crane', 'Date', 'Time'];
   $('copyBtn').addEventListener('click', () => {
     const rows = allRows();
     if (!rows.length) { toast('Nothing to copy yet'); return; }
-    const text = [HEAD.join('\t')].concat(rows.map(x => [x.h, x.t, x.r, x.c, x.code, x.crane, x.date, x.time].join('\t'))).join('\n');
+    const text = [HEAD.join('\t')].concat(rows.map(x => [x.h, x.t, x.r, x.c, x.code, x.colName, x.crane, x.date, x.time].join('\t'))).join('\n');
     const fallback = () => { const ta = $('manualText'); ta.value = text; $('manual').classList.add('show'); ta.focus(); ta.select(); };
     try { navigator.clipboard.writeText(text).then(() => { $('manual').classList.remove('show'); toast('Copied ' + rows.length + ' units'); }, fallback); } catch (e) { fallback(); }
   });
@@ -672,22 +721,36 @@
     });
     return x + '</sheetData></worksheet>';
   }
-  const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>' +
-    '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
-    '<fill><patternFill patternType="solid"><fgColor rgb="FFFFE08A"/><bgColor indexed="64"/></patternFill></fill>' +
-    '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF4CC"/><bgColor indexed="64"/></patternFill></fill></fills>' +
-    '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF8C8C8C"/></left><right style="thin"><color rgb="FF8C8C8C"/></right><top style="thin"><color rgb="FF8C8C8C"/></top><bottom style="thin"><color rgb="FF8C8C8C"/></bottom><diagonal/></border></borders>' +
-    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5">' +
-    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
-    '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' +
-    '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
-    '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf>' +
-    '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
-    '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  // Styles: 0 plain, 1 yellow header, 2 empty grid cell, 3 bold label, 4 coded grid cell (no colour),
+  // then two per colour used: grid cell (5 + 2j) and Record colour cell (6 + 2j).
+  function stylesXml(used) {
+    const fills = used.map(i => '<fill><patternFill patternType="solid"><fgColor rgb="FF' + COLOURS[i][1].slice(1) + '"/><bgColor indexed="64"/></patternFill></fill>').join('');
+    const xfs = used.map((i, j) => {
+      const white = inkOn(COLOURS[i][1]) === '#ffffff', fid = 4 + j;
+      return '<xf numFmtId="0" fontId="' + (white ? 2 : 1) + '" fillId="' + fid + '" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+        '<xf numFmtId="0" fontId="' + (white ? 3 : 0) + '" fillId="' + fid + '" borderId="0" xfId="0" applyFont="1" applyFill="1"/>';
+    }).join('');
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font>' +
+      '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>' +
+      '<fills count="' + (4 + used.length) + '"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFFFE08A"/><bgColor indexed="64"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF4CC"/><bgColor indexed="64"/></patternFill></fill>' + fills + '</fills>' +
+      '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF8C8C8C"/></left><right style="thin"><color rgb="FF8C8C8C"/></right><top style="thin"><color rgb="FF8C8C8C"/></top><bottom style="thin"><color rgb="FF8C8C8C"/></bottom><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="' + (5 + used.length * 2) + '">' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf>' +
+      '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      xfs + '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  }
   function buildXlsx() {
     const rows = allRows();
-    const rec = [HEAD.map(v => ({ v, s: 1 }))].concat(rows.map(x => [x.h, x.t, x.r, x.c, x.code, x.crane, x.date, x.time]));
+    const used = [];
+    for (let n = 1; n <= 11; n++) (S.holds[n] || []).forEach(t => Object.keys(t.cells).forEach(k => { const c = t.cells[k].color; if (isCol(c) && used.indexOf(c) === -1) used.push(c); }));
+    const gridStyle = c => isCol(c) ? 5 + 2 * used.indexOf(c) : 4, recStyle = c => 6 + 2 * used.indexOf(c);
+    const rec = [HEAD.map(v => ({ v, s: 1 }))].concat(rows.map(x => [x.h, x.t, x.r, x.c, x.code, x.color != null ? { v: x.colName, s: recStyle(x.color) } : '', x.crane, x.date, x.time]));
     // Layout sheet: a plan view with the bow to the right. Top row = port side, bottom row = starboard side,
     // each column = one fore-aft position, aft-most nearest column A.
     const lay = []; let maxA = 1;
@@ -702,7 +765,7 @@
       for (let c = 0; c < t.across; c++) {
         const label = t.across === 1 ? 'Col 1' : c === 0 ? 'Col 1 (Port)' : c === t.across - 1 ? 'Col ' + t.across + ' (Stbd)' : 'Col ' + (c + 1);
         const line = [{ v: label, s: 3 }];
-        order.forEach(r => { const cell = t.cells[r + '-' + c]; line.push(cell ? { v: cell.code, s: 4 } : { v: '', s: 2 }); });
+        order.forEach(r => { const cell = t.cells[r + '-' + c]; line.push(cell ? { v: cell.code, s: gridStyle(cell.color) } : { v: '', s: 2 }); });
         lay.push(line);
       }
       lay.push([]);
@@ -722,8 +785,8 @@
     return zip([
       { name: '[Content_Types].xml', data: ct }, { name: '_rels/.rels', data: rels },
       { name: 'xl/workbook.xml', data: wb }, { name: 'xl/_rels/workbook.xml.rels', data: wbr },
-      { name: 'xl/styles.xml', data: STYLES },
-      { name: 'xl/worksheets/sheet1.xml', data: sheetXml(rec, [8, 6, 6, 6, 24, 13, 13, 8]) },
+      { name: 'xl/styles.xml', data: stylesXml(used) },
+      { name: 'xl/worksheets/sheet1.xml', data: sheetXml(rec, [8, 6, 6, 6, 24, 12, 13, 13, 8]) },
       { name: 'xl/worksheets/sheet2.xml', data: sheetXml(lay, [16].concat(Array(maxA).fill(15))) }
     ]);
   }

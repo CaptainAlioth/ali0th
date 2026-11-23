@@ -95,11 +95,18 @@
   .deck { background: var(--deck); border-left: 1.5px solid var(--coam); border-right: 1.5px solid var(--coam); padding: 8px; }
   .deckend { grid-column: 2; position: relative; height: 26px; background: var(--deck); border: 1.5px solid var(--coam); border-top: 0; border-radius: 0 0 10px 10px; }
   .aft { bottom: 5px; }
-  .grid { display: grid; gap: 4px; border: 3px solid var(--coam); border-radius: 4px; padding: 4px; background: var(--bg); }
-  .u { position: relative; min-height: 50px; padding: 15px 2px 4px; border: 1px dashed var(--coam); border-radius: 6px; background: var(--surface); cursor: pointer; font-family: var(--font-mono); font-size: var(--fs, 12px); line-height: 1.15; overflow-wrap: anywhere; text-align: center; }
-  .u .rc { position: absolute; top: 2px; left: 4px; font-size: 9px; color: var(--muted); font-weight: 400; }
-  .dense .u .rc { display: none; }
-  .dense .u { padding-top: 4px; }
+  .gridwrap { overflow: auto; max-height: 62vh; border: 3px solid var(--coam); border-radius: 4px; background: var(--bg); overscroll-behavior: contain; }
+  .grid { display: grid; gap: 4px; padding: 0 4px 4px 0; width: max-content; min-width: 100%; }
+  .gh, .rh, .corner { position: sticky; background: var(--bg); font: 600 10px var(--font-mono); color: var(--muted); display: flex; align-items: center; justify-content: center; }
+  .gh { top: 0; z-index: 2; min-height: 20px; }
+  .rh { left: 0; z-index: 2; }
+  .corner { top: 0; left: 0; z-index: 3; }
+  .u { position: relative; min-height: 50px; padding: 4px 2px; border: 1px dashed var(--coam); border-radius: 6px; background: var(--surface); cursor: pointer; font-family: var(--font-mono); font-size: var(--fs, 12px); line-height: 1.15; overflow-wrap: anywhere; text-align: center; }
+  .numin { width: 4.2em; min-height: 40px; padding: 4px 6px; text-align: center; background: var(--chip); border: 1px solid transparent; border-radius: 9px; font: 600 16px var(--font-mono); -moz-appearance: textfield; }
+  .numin::-webkit-outer-spin-button, .numin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .part { display: flex; gap: 4px; flex: 1 1 110px; }
+  .part .pick, .part input { flex: 1; width: auto; }
+  .part .addbtn { flex: none; min-height: 44px; padding: 4px 10px; border: 0; border-radius: 9px; background: var(--accent); color: var(--accent-fg); font-weight: 600; cursor: pointer; }
   .u.has { background: var(--chip-sel); border: 1px solid var(--accent-ink); font-weight: 600; }
   .u.sel { outline: 3px solid var(--accent); outline-offset: 1px; z-index: 1; }
 
@@ -113,7 +120,12 @@
   .codeprev { font: 700 1.6rem var(--font-mono); letter-spacing: 0.02em; overflow-wrap: anywhere; }
   .codeprev.blank { color: var(--muted); }
   .meta { font-size: 0.82rem; color: var(--muted); }
-  #editor { border: 2px solid var(--accent); }
+  #editor { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; max-width: 720px; margin-inline: auto; max-height: 58vh; overflow-y: auto; border: 2px solid var(--accent); border-bottom: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -8px 24px rgb(0 0 0 / 0.25); padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  body.sheet { padding-bottom: 62vh; }
+  .phpick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .phpick button { display: flex; flex-direction: column; align-items: center; gap: 0; min-height: 54px; }
+  .phpick b { font-size: 1.1rem; }
+  .phpick span { font: 0.8rem var(--font-mono); color: var(--muted); letter-spacing: 0.05em; }
   .x { width: 44px; height: 40px; border: 0; border-radius: 9px; background: var(--chip); font-size: 1.2rem; cursor: pointer; }
 
   .small { min-height: 44px; padding: 4px 12px; background: var(--chip); border: 0; border-radius: 9px; cursor: pointer; font-size: 0.92rem; }
@@ -131,7 +143,7 @@
   textarea { width: 100%; min-height: 130px; font-family: var(--font-mono); font-size: 16px; background: var(--chip); border: 0; border-radius: 9px; padding: 8px; }
   #manual { display: none; flex-direction: column; gap: 6px; }
   #manual.show { display: flex; }
-  #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 9px; font-size: 0.9rem; opacity: 0; pointer-events: none; transition: opacity 0.15s; max-width: calc(100% - 32px); z-index: 5; }
+  #toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 9px; font-size: 0.9rem; opacity: 0; pointer-events: none; transition: opacity 0.15s; max-width: calc(100% - 32px); z-index: 5; }
   #toast.show { opacity: 1; }
   @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
   @media (max-width: 420px) { .cranes { grid-template-columns: repeat(4, 1fr); } .tog.shore { grid-column: 1 / -1; } }
@@ -154,22 +166,22 @@
   <section class="panel" id="tierPanel" aria-label="Tier">
     <div class="row spread"><h2 id="tierTitle">Tier</h2><button class="small danger" id="delTier" type="button">Delete tier</button></div>
     <div class="tabs" id="tabs"></div>
-    <p class="hint">Tier 1 is the bottom tier. Across = port to starboard, Fore-aft = forward to aft.</p>
+    <p class="hint">Tier 1 is the bottom tier. Across = port to starboard, Fore-aft = forward to aft (up to 100 each). Type a number or use &minus; and +.</p>
     <div class="dims" id="dims"></div>
   </section>
+
+  <section class="panel" id="editor" aria-label="Unit code" hidden></section>
 
   <section class="panel" id="planPanel" aria-label="Hatch plan">
     <div class="row spread"><h2 id="planTitle">Units</h2><span class="meta" id="planCount"></span></div>
     <div class="plan" id="plan">
       <div class="bow"><svg viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 34 V30 C12 10 34 1 50 1 C66 1 88 10 100 30 V34"/></svg><span>&#9650; FWD</span></div>
       <span class="side port" style="grid-row:2;grid-column:1">PORT</span>
-      <div class="deck" style="grid-row:2;grid-column:2"><div class="grid" id="grid"></div></div>
+      <div class="deck" style="grid-row:2;grid-column:2"><div class="gridwrap" id="gridwrap"><div class="grid" id="grid"></div></div></div>
       <span class="side" style="grid-row:2;grid-column:3">STBD</span>
       <div class="deckend" style="grid-row:3"><span class="aft">AFT</span></div>
     </div>
   </section>
-
-  <section class="panel" id="editor" aria-label="Unit code" hidden></section>
 
   <section class="panel" id="startMsg"><div class="start">Pick the crane, then tap a hatch on the ship to start recording.</div></section>
 
@@ -190,9 +202,9 @@
   <section class="panel">
     <details id="listBox">
       <summary>Code options (dropdown lists)</summary>
-      <p class="hint">One option per line. Part 1 is the first box of the code, Part 2 the second, and so on. An empty list gives a free-type box.</p>
+      <p class="hint">Codes you add with + New code land here. One per line: edit or delete lines to change a list. Part 1 is the first box of the code, Part 2 the second, and so on.</p>
       <div class="lists" id="lists"></div>
-      <div class="row" style="margin-top:8px"><button class="small danger" id="resetLists" type="button">Reset to sample lists</button></div>
+      <div class="row" style="margin-top:8px"><button class="small danger" id="resetLists" type="button">Clear all code lists</button></div>
     </details>
   </section>
 </div>
@@ -209,28 +221,42 @@
   const fmtDate = ts => { const d = new Date(ts); return pad(d.getDate()) + '-' + MON[d.getMonth()] + '-' + d.getFullYear(); };
   const fmtTime = ts => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   const craneName = c => c === 'Shore' ? 'Shore crane' : (c ? 'Crane ' + c : '');
-  // Sample options, edit them under Code options.
-  const defLists = () => [
+  const MAXD = 100;
+  // Code lists start empty. Codes are added with "+ New code" and kept until changed under Code options.
+  const defLists = () => [[], [], [], [], [], []];
+  // The sample lists shipped in the first version, cleared on update unless the user changed them.
+  const OLD_SAMPLE = JSON.stringify([
     ['YOK', 'TYO', 'KOB', 'NGO', 'OSA', 'SHA', 'BNE', 'SYD', 'MEL'],
     ['BL', 'PL', 'CL', 'CT', 'BD'],
     Array.from({ length: 50 }, (_, i) => String(i + 1).padStart(3, '0')),
     [], [], []
-  ];
+  ]);
 
   let S = null;
   try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
   if (!S || typeof S !== 'object') S = {};
+  const firstRun = S.v !== 2;
   S = {
+    v: 2,
     crane: ['1', '2', '3', '4', 'Shore'].indexOf(S.crane) > -1 ? S.crane : null,
-    hatches: clampInt(S.hatches, 1, 11, 5),
+    hatches: clampInt(S.hatches, 1, 11, 11),
     hatch: clampInt(S.hatch, 1, 11, null),
     holds: (S.holds && typeof S.holds === 'object') ? S.holds : {},
     tierSel: (S.tierSel && typeof S.tierSel === 'object') ? S.tierSel : {},
     lists: (Array.isArray(S.lists) && S.lists.length === MAXP) ? S.lists : defLists(),
     last: Array.isArray(S.last) ? S.last : [],
+    ph: clampInt(S.ph, 1, MAXP, null), // number of code parts: none until chosen, then kept until changed
     dim: (S.dim && typeof S.dim === 'object') ? S.dim : { across: 4, rows: 3, ph: 3 }
   };
+  if (firstRun) {
+    // Update from the first version: 11 hatches unless more data says otherwise, and no sample codes.
+    let maxUsed = 0;
+    for (let n = 1; n <= 11; n++) if ((S.holds[n] || []).length) maxUsed = n;
+    S.hatches = Math.max(11, maxUsed);
+    if (JSON.stringify(S.lists) === OLD_SAMPLE) S.lists = defLists();
+  }
   if (S.hatch && S.hatch > S.hatches) S.hatch = null;
+  save();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 
   let selCell = null, draft = null, dl = null;
@@ -246,7 +272,7 @@
   }
 
   const tiers = h => S.holds[h] || (S.holds[h] = []);
-  const newTier = () => ({ across: S.dim.across, rows: S.dim.rows, ph: S.dim.ph, cells: {} });
+  const newTier = () => ({ across: S.dim.across, rows: S.dim.rows, cells: {} });
   const nCells = t => Object.keys(t.cells).length;
   const hatchCount = h => (S.holds[h] || []).reduce((s, t) => s + nCells(t), 0);
   function tierIdx() {
@@ -262,6 +288,13 @@
     return '<div class="stepper"><span class="slabel">' + label + '</span>' +
       '<button type="button" data-st="' + key + '" data-d="-1"' + (val <= min ? ' disabled' : '') + ' aria-label="Less: ' + label + '">&minus;</button>' +
       '<output>' + val + '</output>' +
+      '<button type="button" data-st="' + key + '" data-d="1"' + (val >= max ? ' disabled' : '') + ' aria-label="More: ' + label + '">+</button></div>';
+  }
+
+  function numStep(label, key, val, min, max) {
+    return '<div class="stepper"><span class="slabel">' + label + '</span>' +
+      '<button type="button" data-st="' + key + '" data-d="-1"' + (val <= min ? ' disabled' : '') + ' aria-label="Less: ' + label + '">&minus;</button>' +
+      '<input class="numin" type="number" inputmode="numeric" pattern="[0-9]*" min="' + min + '" max="' + max + '" value="' + val + '" data-num="' + key + '" aria-label="' + label + '">' +
       '<button type="button" data-st="' + key + '" data-d="1"' + (val >= max ? ' disabled' : '') + ' aria-label="More: ' + label + '">+</button></div>';
   }
 
@@ -295,29 +328,58 @@
     $('hatchStep').innerHTML = stepper('Hatches on this ship', 'hatches', S.hatches, 1, 11);
   }
 
+  let gridSig = '';
   function renderTier() {
     const on = !!S.hatch;
     $('tierPanel').hidden = !on; $('planPanel').hidden = !on; $('startMsg').hidden = on;
-    if (!on) { $('editor').hidden = true; return; }
+    if (!on) { $('editor').hidden = true; gridSig = ''; return; }
     const ts = tiers(S.hatch), i = tierIdx(), tr = ts[i];
     $('tierTitle').textContent = 'Hatch ' + S.hatch + ' tiers';
     $('tabs').innerHTML = ts.map((t, j) =>
       '<button type="button" class="tab" data-t="' + j + '" aria-pressed="' + (j === i) + '">Tier ' + (j + 1) + '<small>' + nCells(t) + '/' + (t.across * t.rows) + '</small></button>').join('') +
       '<button type="button" class="tab add" id="addTier">+ Tier</button>';
-    $('dims').innerHTML = stepper('Units across', 'across', tr.across, 1, 12) + stepper('Units fore-aft', 'rows', tr.rows, 1, 12) + stepper('Code parts (new units)', 'ph', tr.ph, 1, MAXP);
+    const ae = document.activeElement, focusKey = ae && ae.dataset ? ae.dataset.num : null;
+    $('dims').innerHTML = numStep('Units across', 'across', tr.across, 1, MAXD) + numStep('Units fore-aft', 'rows', tr.rows, 1, MAXD);
+    if (focusKey) { const f = document.querySelector('[data-num="' + focusKey + '"]'); if (f) f.focus(); }
     $('planTitle').textContent = 'Hatch ' + S.hatch + ' · Tier ' + (i + 1);
     $('planCount').textContent = nCells(tr) + ' of ' + (tr.across * tr.rows) + ' recorded';
+    // The grid is rebuilt only when the hatch, tier or size changes; single units are repainted in place.
+    const sig = S.hatch + '|' + i + '|' + tr.across + '|' + tr.rows;
+    if (sig !== gridSig) { gridSig = sig; buildGrid(tr); }
+  }
+  function cellHtml(k, cell) {
+    const [r, c] = k.split('-').map(Number);
+    return '<button type="button" class="u' + (cell ? ' has' : '') + (selCell === k ? ' sel' : '') + '" data-k="' + k + '" aria-label="Row ' + (r + 1) + ' col ' + (c + 1) + (cell ? ': ' + esc(cell.code) : ', empty') + '">' +
+      (cell ? esc(cell.code).replace(/-/g, '-<wbr>') : '') + '</button>';
+  }
+  function buildGrid(tr) {
     const g = $('grid');
-    g.style.gridTemplateColumns = 'repeat(' + tr.across + ', minmax(0, 1fr))';
-    g.style.setProperty('--fs', tr.across <= 4 ? '13px' : tr.across <= 6 ? '11.5px' : tr.across <= 8 ? '10px' : '9px');
-    $('plan').classList.toggle('dense', tr.across > 7);
-    let h = '';
-    for (let r = 0; r < tr.rows; r++) for (let c = 0; c < tr.across; c++) {
-      const k = r + '-' + c, cell = tr.cells[k];
-      h += '<button type="button" class="u' + (cell ? ' has' : '') + (selCell === k ? ' sel' : '') + '" data-k="' + k + '" aria-label="Row ' + (r + 1) + ' col ' + (c + 1) + (cell ? ': ' + esc(cell.code) : ', empty') + '">' +
-        '<span class="rc">' + (r + 1) + '.' + (c + 1) + '</span>' + (cell ? esc(cell.code).replace(/-/g, '-<wbr>') : '') + '</button>';
+    g.style.gridTemplateColumns = '26px repeat(' + tr.across + ', minmax(' + (tr.across <= 5 ? '0' : '56px') + ', 1fr))';
+    g.style.setProperty('--fs', tr.across <= 4 ? '13px' : tr.across <= 5 ? '11.5px' : '10.5px');
+    const out = ['<div class="corner"></div>'];
+    for (let c = 0; c < tr.across; c++) out.push('<div class="gh">' + (c + 1) + '</div>');
+    for (let r = 0; r < tr.rows; r++) {
+      out.push('<div class="rh">' + (r + 1) + '</div>');
+      for (let c = 0; c < tr.across; c++) { const k = r + '-' + c; out.push(cellHtml(k, tr.cells[k])); }
     }
-    g.innerHTML = h;
+    g.innerHTML = out.join('');
+  }
+  function paintCell(k) {
+    const tr = curTier(), el = tr && $('grid').querySelector('[data-k="' + k + '"]');
+    if (el) el.outerHTML = cellHtml(k, tr.cells[k]);
+  }
+  function showSel(prev) {
+    if (prev) paintCell(prev);
+    if (selCell) {
+      paintCell(selCell);
+      const el = $('grid').querySelector('[data-k="' + selCell + '"]');
+      if (el) {
+        // Scroll only inside the hatch box so the page itself stays put.
+        const w = $('gridwrap'), er = el.getBoundingClientRect(), wr = w.getBoundingClientRect();
+        if (er.left < wr.left + 30 || er.right > wr.right) w.scrollLeft += er.left - wr.left - 40;
+        if (er.top < wr.top + 24 || er.bottom > wr.bottom) w.scrollTop += er.top - wr.top - 30;
+      }
+    }
   }
 
   function advance(parts, ph) {
@@ -327,35 +389,48 @@
     else if (/^\d+$/.test(v)) p[i] = String(+v + 1).padStart(v.length, '0');
     return p;
   }
+  function startParts(ph) {
+    if (!ph) return [];
+    return S.last.length ? advance(S.last, ph) : Array(ph).fill('');
+  }
   function openCell(k) {
     const tr = curTier(); selCell = k;
     const cell = tr.cells[k];
-    if (cell) draft = { ph: cell.ph, parts: cell.parts ? cell.parts.slice() : [], custom: cell.parts ? '' : cell.code };
-    else draft = { ph: tr.ph, parts: S.last.length ? advance(S.last, tr.ph) : Array(tr.ph).fill(''), custom: '' };
+    if (cell) draft = { ph: cell.ph, parts: cell.parts ? cell.parts.slice() : [], custom: cell.parts ? '' : cell.code, adding: {} };
+    else draft = { ph: S.ph, parts: startParts(S.ph), custom: '', adding: {} };
   }
   const draftCode = () => draft.custom.trim() || draft.parts.slice(0, draft.ph).map(x => x || '_').join('-');
   const draftOk = () => !!draft.custom.trim() || draft.parts.slice(0, draft.ph).every(x => x && x.trim());
 
   function renderEditor() {
     const tr = curTier(), box = $('editor');
-    if (!tr || !selCell || !draft) { box.hidden = true; return; }
-    box.hidden = false;
+    if (!tr || !selCell || !draft) { box.hidden = true; document.body.classList.remove('sheet'); return; }
+    box.hidden = false; document.body.classList.add('sheet');
     const [r, c] = selCell.split('-').map(Number), cell = tr.cells[selCell];
+    const head = '<div class="row spread"><h2>Hatch ' + S.hatch + ' · Tier ' + (tierIdx() + 1) + ' · Row ' + (r + 1) + ', Col ' + (c + 1) + '</h2><button type="button" class="x" id="edClose" aria-label="Close">&times;</button></div>';
+    if (!draft.ph) {
+      // First use: choose how many parts the cargo code has. The choice is kept for every unit until changed.
+      box.innerHTML = head + '<p class="hint">How many parts does the cargo code have?</p><div class="phpick">' +
+        [1, 2, 3, 4, 5, 6].map(n => '<button type="button" class="small" data-php="' + n + '"><b>' + n + '</b><span>' + Array(n).fill('_').join('-') + '</span></button>').join('') + '</div>';
+      return;
+    }
     while (draft.parts.length < draft.ph) draft.parts.push('');
     let parts = '';
     for (let i = 0; i < draft.ph; i++) {
       if (i) parts += '<span class="dash">-</span>';
       const list = S.lists[i] || [], v = draft.parts[i] || '';
-      if (list.length) {
+      if (list.length && !draft.adding[i]) {
         const opts = (v && list.indexOf(v) === -1 ? [v] : []).concat(list);
-        parts += '<select class="pick" data-p="' + i + '" aria-label="Code part ' + (i + 1) + '"><option value="">—</option>' +
-          opts.map(o => '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>';
+        parts += '<div class="part"><select class="pick" data-p="' + i + '" aria-label="Code part ' + (i + 1) + '"><option value="">—</option>' +
+          opts.map(o => '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>').join('') +
+          '<option value="__new">+ New code…</option></select></div>';
       } else {
-        parts += '<input type="text" data-p="' + i + '" value="' + esc(v) + '" placeholder="Part ' + (i + 1) + '" aria-label="Code part ' + (i + 1) + '" autocomplete="off" autocapitalize="characters">';
+        // No codes yet for this part, or + New code chosen: type it once and it joins the dropdown for next time.
+        parts += '<div class="part"><input type="text" data-p="' + i + '" value="' + esc(v) + '" placeholder="New code ' + (i + 1) + '" aria-label="New code for part ' + (i + 1) + '" autocomplete="off" autocapitalize="characters" enterkeyhint="done">' +
+          '<button type="button" class="addbtn" data-addp="' + i + '">Add</button></div>';
       }
     }
-    box.innerHTML =
-      '<div class="row spread"><h2>Hatch ' + S.hatch + ' · Tier ' + (tierIdx() + 1) + ' · Row ' + (r + 1) + ', Col ' + (c + 1) + '</h2><button type="button" class="x" id="edClose" aria-label="Close">&times;</button></div>' +
+    box.innerHTML = head +
       stepper('Code parts', 'uph', draft.ph, 1, MAXP) +
       '<div class="parts" id="parts">' + parts + '</div>' +
       '<input type="text" id="custom" value="' + esc(draft.custom) + '" placeholder="Or type the full code" autocomplete="off" autocapitalize="characters" aria-label="Full code">' +
@@ -365,35 +440,63 @@
       (cell ? '<button type="button" class="small danger" id="clearUnit">Clear unit</button>' : '') + '</div>';
     renderPreview();
     const cu = $('clearUnit');
-    if (cu) arm(cu, 'Clear unit', 'Tap again', () => { delete tr.cells[selCell]; save(); openCell(selCell); renderAll(); });
+    if (cu) arm(cu, 'Clear unit', 'Tap again', () => { delete tr.cells[selCell]; save(); openCell(selCell); renderAll(); paintCell(selCell); });
+  }
+  function addToList(i, v) {
+    v = String(v || '').trim().toUpperCase();
+    if (!v) return false;
+    if (S.lists[i].indexOf(v) === -1) S.lists[i].push(v);
+    return true;
+  }
+  // Keeps the chosen unit visible above the code panel at the bottom of the screen.
+  function revealSel() {
+    if (!selCell) return;
+    const el = $('grid').querySelector('[data-k="' + selCell + '"]'), ed = $('editor');
+    if (!el || ed.hidden) return;
+    const er = el.getBoundingClientRect(), limit = window.innerHeight - ed.offsetHeight - 12;
+    if (er.bottom > limit) window.scrollBy(0, er.bottom - limit);
+    else if (er.top < 8) window.scrollBy(0, er.top - 16);
   }
   function renderPreview() {
     const p = $('codeprev'); if (!p) return;
     p.textContent = draftCode(); p.classList.toggle('blank', !draftOk());
   }
 
+  // After a save the selector stays beside the unit just saved: it keeps going the way you were working
+  // along the row, otherwise the nearest empty unit (same row first, then the rows either side).
+  let moveDir = 1;
   function nextEmpty(tr, from) {
     const [r0, c0] = from.split('-').map(Number);
-    for (let s = r0 * tr.across + c0 + 1; s < tr.rows * tr.across; s++) {
-      const k = Math.floor(s / tr.across) + '-' + (s % tr.across);
-      if (!tr.cells[k]) return k;
+    const free = (r, c) => r >= 0 && c >= 0 && r < tr.rows && c < tr.across && !tr.cells[r + '-' + c];
+    const tries = [[r0, c0 + moveDir], [r0, c0 - moveDir], [r0 + 1, c0], [r0 - 1, c0]];
+    for (const [r, c] of tries) if (free(r, c)) return r + '-' + c;
+    let best = null, bd = Infinity;
+    for (let r = 0; r < tr.rows; r++) for (let c = 0; c < tr.across; c++) {
+      if (!free(r, c)) continue;
+      const d = Math.abs(r - r0) * 1.01 + Math.abs(c - c0) + (Math.sign(c - c0) === -moveDir ? 0.001 : 0);
+      if (d < bd) { bd = d; best = r + '-' + c; }
     }
-    return null;
+    return best;
   }
   function saveUnit(next) {
     if (!S.crane) { toast('Select the crane first'); return; }
     if (!draftOk()) { toast('Pick every part of the code'); return; }
-    const tr = curTier(), custom = draft.custom.trim();
+    const tr = curTier(), custom = draft.custom.trim(), savedK = selCell;
+    if (!custom) { draft.parts.slice(0, draft.ph).forEach((v, i) => addToList(i, v)); renderLists(); }
     tr.cells[selCell] = { code: draftCode(), parts: custom ? null : draft.parts.slice(0, draft.ph), ph: draft.ph, crane: S.crane, ts: Date.now() };
     if (!custom) S.last = draft.parts.slice(0, draft.ph);
     save();
     const code = tr.cells[selCell].code;
     if (next) {
       const k = nextEmpty(tr, selCell);
-      if (k) { openCell(k); toast('Saved ' + code); }
+      if (k) {
+        const [r0, c0] = selCell.split('-').map(Number), [r1, c1] = k.split('-').map(Number);
+        if (r1 === r0 && c1 !== c0) moveDir = Math.sign(c1 - c0);
+        openCell(k); toast('Saved ' + code);
+      }
       else { selCell = null; draft = null; toast('Saved ' + code + '. No empty units left after this one'); }
     } else toast('Saved ' + code);
-    renderAll();
+    renderAll(); paintCell(savedK); showSel(null); revealSel();
   }
 
   function allRows() {
@@ -432,12 +535,28 @@
     if (b.dataset.c) { S.crane = b.dataset.c; save(); renderCranes(); if (selCell) renderEditor(); return; }
     if (b.dataset.h) { pickHatch(+b.dataset.h); return; }
     if (b.dataset.t) { S.tierSel[S.hatch] = +b.dataset.t; selCell = null; draft = null; save(); renderAll(); return; }
-    if (b.id === 'addTier') { const ts = tiers(S.hatch), last = ts[ts.length - 1]; ts.push({ across: last.across, rows: last.rows, ph: last.ph, cells: {} }); S.tierSel[S.hatch] = ts.length - 1; selCell = null; draft = null; save(); renderAll(); toast('Tier ' + ts.length + ' added'); return; }
-    if (b.dataset.k) { openCell(b.dataset.k); renderTier(); renderEditor(); $('editor').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
+    if (b.id === 'addTier') { const ts = tiers(S.hatch), last = ts[ts.length - 1]; ts.push({ across: last.across, rows: last.rows, cells: {} }); S.tierSel[S.hatch] = ts.length - 1; selCell = null; draft = null; save(); renderAll(); toast('Tier ' + ts.length + ' added'); return; }
+    if (b.dataset.k) { const prev = selCell;
+      if (prev) { const [pr, pc] = prev.split('-').map(Number), [nr, nc] = b.dataset.k.split('-').map(Number); if (pr === nr && pc !== nc) moveDir = Math.sign(nc - pc); } openCell(b.dataset.k); showSel(prev); renderEditor(); revealSel(); return; }
+    if (b.dataset.php) {
+      const n = +b.dataset.php; S.ph = n; save();
+      draft.ph = n; draft.parts = startParts(n); renderEditor(); revealSel(); return;
+    }
+    if (b.dataset.addp) {
+      const i = +b.dataset.addp;
+      if (!addToList(i, draft.parts[i])) { toast('Type the code first'); return; }
+      draft.parts[i] = draft.parts[i].trim().toUpperCase(); draft.adding[i] = false;
+      save(); renderLists(); renderEditor(); toast(draft.parts[i] + ' added to part ' + (i + 1)); return;
+    }
     if (b.dataset.st) { step(b.dataset.st, +b.dataset.d); return; }
-    if (b.id === 'edClose') { selCell = null; draft = null; renderTier(); renderEditor(); return; }
+    if (b.id === 'edClose') { const prev = selCell; selCell = null; draft = null; showSel(prev); renderEditor(); return; }
     if (b.id === 'saveNext') { saveUnit(true); return; }
     if (b.id === 'saveOne') { saveUnit(false); return; }
+  });
+  document.addEventListener('keydown', e => {
+    const t = e.target;
+    if (e.key === 'Enter' && t.matches && t.matches('input[data-p]')) { const b = document.querySelector('[data-addp="' + t.dataset.p + '"]'); if (b) b.click(); }
+    if (e.key === 'Enter' && t.matches && t.matches('input[data-num]')) t.blur();
   });
   $('ship').addEventListener('keydown', e => {
     const g = e.target.closest('.hx');
@@ -454,20 +573,34 @@
       if (d < 0) { delete S.holds[S.hatches]; delete S.tierSel[S.hatches]; if (S.hatch === S.hatches) { S.hatch = null; selCell = null; } }
       S.hatches = v; save(); renderAll(); return;
     }
-    if (key === 'uph') { const v = draft.ph + d; if (v >= 1 && v <= MAXP) { draft.ph = v; renderEditor(); } return; }
+    if (key === 'uph') { const v = draft.ph + d; if (v >= 1 && v <= MAXP) { draft.ph = v; S.ph = v; save(); renderEditor(); } return; }
+    const tr = curTier(); if (tr) setDim(key, tr[key] + d);
+  }
+  function setDim(key, v) {
     const tr = curTier(); if (!tr) return;
-    const v = tr[key] + d, max = key === 'ph' ? MAXP : 12;
-    if (v < 1 || v > max) return;
-    if (d < 0 && (key === 'across' || key === 'rows')) {
+    const max = key === 'ph' ? MAXP : MAXD;
+    if (!(v >= 1)) v = 1;
+    if (v > max) { v = max; toast('Maximum is ' + max); }
+    if (v === tr[key]) { renderTier(); return; }
+    if (v < tr[key] && (key === 'across' || key === 'rows')) {
       const used = Object.keys(tr.cells).some(k => { const [r, c] = k.split('-').map(Number); return key === 'across' ? c >= v : r >= v; });
-      if (used) { toast('Clear the codes in the last ' + (key === 'across' ? 'column' : 'row') + ' first'); return; }
+      if (used) { toast('Clear the codes in the ' + (key === 'across' ? 'columns' : 'rows') + ' past ' + v + ' first'); renderTier(); return; }
       if (selCell) { const [r, c] = selCell.split('-').map(Number); if ((key === 'across' ? c : r) >= v) { selCell = null; draft = null; } }
     }
     tr[key] = v; S.dim[key] = v; save(); renderAll();
   }
   document.addEventListener('change', e => {
     const t = e.target;
-    if (t.matches('select[data-p]')) { draft.parts[+t.dataset.p] = t.value; renderPreview(); }
+    if (t.matches('select[data-p]')) {
+      const i = +t.dataset.p;
+      if (t.value === '__new') {
+        draft.adding[i] = true; draft.parts[i] = ''; renderEditor();
+        const inp = document.querySelector('input[data-p="' + i + '"]'); if (inp) inp.focus();
+        return;
+      }
+      draft.parts[i] = t.value; renderPreview();
+    }
+    if (t.matches('input[data-num]')) setDim(t.dataset.num, parseInt(t.value, 10));
     if (t.matches('textarea[data-l]')) {
       const seen = {};
       S.lists[+t.dataset.l] = t.value.split(/[\n,]+/).map(x => x.trim()).filter(x => x && !seen[x] && (seen[x] = 1));
@@ -486,7 +619,7 @@
   arm($('clearAll'), 'Clear all', 'Tap again to clear', () => {
     S.holds = {}; S.tierSel = {}; S.hatch = null; S.last = []; selCell = null; draft = null; save(); renderAll(); toast('Record cleared');
   });
-  arm($('resetLists'), 'Reset to sample lists', 'Tap again to reset', () => { S.lists = defLists(); save(); renderLists(); renderEditor(); toast('Lists reset'); });
+  arm($('resetLists'), 'Clear all code lists', 'Tap again to clear lists', () => { S.lists = defLists(); save(); renderLists(); renderEditor(); toast('Code lists cleared'); });
 
   // Copy for Excel
   const HEAD = ['Hatch', 'Tier', 'Row', 'Col', 'Cargo code', 'Crane', 'Date', 'Time'];
@@ -555,20 +688,23 @@
   function buildXlsx() {
     const rows = allRows();
     const rec = [HEAD.map(v => ({ v, s: 1 }))].concat(rows.map(x => [x.h, x.t, x.r, x.c, x.code, x.crane, x.date, x.time]));
+    // Layout sheet: a plan view with the bow to the right. Top row = port side, bottom row = starboard side,
+    // each column = one fore-aft position, aft-most nearest column A.
     const lay = []; let maxA = 1;
     for (let h = 1; h <= 11; h++) (S.holds[h] || []).forEach((t, ti) => {
       if (!nCells(t)) return;
-      maxA = Math.max(maxA, t.across);
-      const mid = Math.floor((t.across - 1) / 2) + 1;
+      maxA = Math.max(maxA, t.rows);
+      const order = Array.from({ length: t.rows }, (_, j) => t.rows - 1 - j); // aft row first
       lay.push([{ v: 'Hatch ' + h + ' - Tier ' + (ti + 1), s: 1 }]);
-      const fw = []; fw[mid] = { v: 'FWD', s: 3 }; lay.push(fw);
-      lay.push([''].concat(Array.from({ length: t.across }, (_, c) => ({ v: c === 0 ? 'Col 1 (Port)' : c === t.across - 1 ? 'Col ' + t.across + ' (Stbd)' : 'Col ' + (c + 1), s: 3 }))));
-      for (let r = 0; r < t.rows; r++) {
-        const line = [{ v: 'Row ' + (r + 1), s: 3 }];
-        for (let c = 0; c < t.across; c++) { const cell = t.cells[r + '-' + c]; line.push(cell ? { v: cell.code, s: 4 } : { v: '', s: 2 }); }
+      const ends = ['']; ends[1] = { v: t.rows === 1 ? 'AFT - FWD' : 'AFT', s: 3 }; if (t.rows > 1) ends[t.rows] = { v: 'FWD', s: 3 };
+      lay.push(ends);
+      lay.push([''].concat(order.map(r => ({ v: 'Row ' + (r + 1), s: 3 }))));
+      for (let c = 0; c < t.across; c++) {
+        const label = t.across === 1 ? 'Col 1' : c === 0 ? 'Col 1 (Port)' : c === t.across - 1 ? 'Col ' + t.across + ' (Stbd)' : 'Col ' + (c + 1);
+        const line = [{ v: label, s: 3 }];
+        order.forEach(r => { const cell = t.cells[r + '-' + c]; line.push(cell ? { v: cell.code, s: 4 } : { v: '', s: 2 }); });
         lay.push(line);
       }
-      const af = []; af[mid] = { v: 'AFT', s: 3 }; lay.push(af);
       lay.push([]);
     });
     const ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
@@ -610,7 +746,7 @@
   })();
 
   renderLists(); renderAll();
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(function () {});
+  try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(function () {}); } catch (e) {}
 }
 </script>
 </body></html>

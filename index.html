@@ -195,6 +195,14 @@
   .crane { font-size: 0.8rem; color: var(--muted); overflow-wrap: anywhere; }
   .del { min-height: 32px; padding: 3px 9px; background: transparent; border: 0; border-radius: 8px; color: var(--muted); font-size: 0.78rem; cursor: pointer; }
   .del.armed, .danger.armed { color: var(--danger); }
+  .acts { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .editbox { display: flex; flex-direction: column; gap: 8px; padding: 10px; margin: 6px 0; border: 2px solid var(--accent); border-radius: 10px; background: var(--surface); }
+  .editbox label { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; color: var(--muted); min-width: 0; }
+  .editbox label.einline { flex-direction: row; align-items: center; justify-content: space-between; font-size: 0.92rem; color: var(--fg); }
+  .editbox label.einline .pick { width: 5.5em; }
+  .editbox input, .editbox select { font-size: 16px; color: var(--fg); }
+  .editbox input[type="date"], .editbox input[type="time"], .editbox input[type="text"] { min-height: 40px; padding: 5px 10px; background: var(--chip); border: 1px solid transparent; border-radius: 9px; width: 100%; }
+  .egrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .empty { color: var(--muted); padding: 8px 0; }
 
   .copygrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -359,6 +367,7 @@
   };
   var sel = { a: [], b: [] };
   var editing = false;
+  var editId = null; // log line open for editing
 
   var $ = function (id) { return document.getElementById(id); };
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -575,6 +584,7 @@
         var dg = document.createElement('div'); dg.className = 'dategroup'; dg.textContent = dk;
         box.appendChild(dg); lastDate = dk; prevHold = null; prevCt = '';
       }
+      if (en.id === editId) { box.appendChild(editRow(en)); prevHold = undefined; prevCt = undefined; return; }
       var row = document.createElement('div');
       var isEm = RE_EMERG.test(en.text || '');
       row.className = 'entry' + (en.hold ? ' has-hold' : '') + (isEm ? ' emergency' : '');
@@ -606,14 +616,72 @@
       body.appendChild(c);
       if (ct !== prevCt) { var cr = document.createElement('div'); cr.className = 'crane'; cr.textContent = ct || 'No cranes'; body.appendChild(cr); }
       prevHold = curHold; prevCt = ct;
+      var acts = document.createElement('div'); acts.className = 'acts';
+      var ed = document.createElement('button'); ed.type = 'button'; ed.className = 'del'; ed.textContent = 'Edit';
+      ed.addEventListener('click', function () { editId = en.id; renderEntries(); var f = document.getElementById('eText'); if (f) f.closest('.editbox').scrollIntoView({ block: 'nearest' }); });
       var del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = 'Delete';
       arm(del, 'Delete', 'Tap again', function () {
         entries = entries.filter(function (x) { return x.id !== en.id && x.pairId !== en.id; });
         save(KEY_E, entries); renderEntries();
       });
-      row.appendChild(w); row.appendChild(body); row.appendChild(del);
+      acts.appendChild(ed); acts.appendChild(del);
+      row.appendChild(w); row.appendChild(body); row.appendChild(acts);
       box.appendChild(row);
     });
+  }
+
+  // Edit form for one log line: date, time, To time, hold, cranes and comment.
+  function hesc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]; }); }
+  function isoDate(ts) { var d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function editRow(en) {
+    var cr = shipCranes(en), box = document.createElement('div');
+    box.className = 'editbox';
+    var holdOpts = '<option value="">No hold</option>';
+    for (var n = 1; n <= 11; n++) holdOpts += '<option value="' + n + '"' + (en.hold === n ? ' selected' : '') + '>Hold ' + n + '</option>';
+    var shoreOpts = '';
+    for (var s = 0; s <= MAX_SHORE; s++) shoreOpts += '<option value="' + s + '"' + ((en.shore || 0) === s ? ' selected' : '') + '>' + s + '</option>';
+    var crBtns = '';
+    for (var c = 1; c <= 4; c++) crBtns += '<button type="button" class="tog" data-ecr="' + c + '" aria-pressed="' + (cr.indexOf(c) > -1) + '">Crane ' + c + '</button>';
+    box.innerHTML =
+      '<div class="sub">Edit entry</div>' +
+      '<div class="egrid">' +
+        '<label>Date<input type="date" id="eDate" value="' + isoDate(en.ts) + '"></label>' +
+        '<label>Time<input type="time" id="eTime" value="' + fmtTime(en.ts) + '"></label>' +
+        (en.to ? '<label>To<input type="time" id="eTo" value="' + fmtTime(en.to) + '"></label>' : '') +
+        '<label>Hold<select class="pick" id="eHold">' + holdOpts + '</select></label>' +
+      '</div>' +
+      '<div class="sub">Ship cranes</div><div class="shipcr">' + crBtns + '</div>' +
+      '<label class="einline">Shore cranes<select class="pick" id="eShore">' + shoreOpts + '</select></label>' +
+      '<label class="eblock">Comment<input type="text" id="eText" value="' + hesc(en.text) + '" autocomplete="off"></label>' +
+      '<div class="row"><button type="button" class="small primary" id="eSave">Save changes</button><button type="button" class="small" id="eCancel">Cancel</button></div>';
+    Array.prototype.forEach.call(box.querySelectorAll('[data-ecr]'), function (b) {
+      b.addEventListener('click', function () { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); });
+    });
+    box.querySelector('#eCancel').addEventListener('click', function () { editId = null; renderEntries(); });
+    box.querySelector('#eSave').addEventListener('click', function () {
+      var dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(box.querySelector('#eDate').value), tm = /^(\d{1,2}):(\d{2})/.exec(box.querySelector('#eTime').value);
+      if (!dm || !tm) { toast('Set the date and time'); return; }
+      var ts = new Date(+dm[1], +dm[2] - 1, +dm[3], +tm[1], +tm[2], 0, 0).getTime();
+      var to = null, toEl = box.querySelector('#eTo');
+      if (toEl) {
+        var tt = /^(\d{1,2}):(\d{2})/.exec(toEl.value);
+        if (!tt) { toast('Set the To time'); return; }
+        var td = new Date(ts); td.setHours(+tt[1], +tt[2], 0, 0);
+        if (td.getTime() < ts) td.setDate(td.getDate() + 1); // To earlier than From means it ran past midnight
+        to = td.getTime();
+      }
+      var picked = [];
+      Array.prototype.forEach.call(box.querySelectorAll('[data-ecr]'), function (b) { if (b.getAttribute('aria-pressed') === 'true') picked.push(+b.getAttribute('data-ecr')); });
+      var hv = box.querySelector('#eHold').value;
+      en.ts = ts; if (toEl) en.to = to;
+      en.hold = hv ? parseInt(hv, 10) : null;
+      en.cr = picked.sort(); delete en.g1; delete en.g2;
+      en.shore = parseInt(box.querySelector('#eShore').value, 10) || 0;
+      en.text = clean(box.querySelector('#eText').value);
+      editId = null; save(KEY_E, entries); renderEntries(); toast('Entry updated');
+    });
+    box.querySelector('#eText').addEventListener('keydown', function (e) { if (e.key === 'Enter') box.querySelector('#eSave').click(); });
+    return box;
   }
 
   // The latest Start or Commence that has not been closed by a Stop, up to the given time.

@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Port Watch Log</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f2b705">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Watch Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+  /* Quiet layout: flat tonal panels, few borders, one yellow accent used for fills (day: amber, night: softer gold) with dark text so it reads in both. Red is kept for Commence, Completion and Emergency. */
+  :root {
+    --bg: #f2f3f5;
+    --surface: #ffffff;
+    --fg: #1b222a;
+    --muted: #5f6b76;
+    --line: #e6e9ed;
+    --chip: #eef0f3;
+    --chip-sel: #fff0b8;
+    --accent: #f2b705;
+    --accent-fg: #1c1500;
+    --accent-ink: #8a5f00;
+    --danger: #b3261e;
+    --hold-s: 62%;
+    --hold-l: 38%;
+    --hold-fg: #ffffff;
+    --alert: #c62828;
+    --alert-bg: #fdeaea;
+    --alert-fg: #ffffff;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1219; --surface: #121c26; --fg: #e8edf1; --muted: #8d9ca9; --line: #1f2c38;
+      --chip: #1a2733; --chip-sel: #3a2f08;
+      --accent: #e9b824; --accent-fg: #1a1400; --accent-ink: #f0c443;
+      --danger: #ff8a80; --hold-s: 60%; --hold-l: 62%; --hold-fg: #07131b;
+      --alert: #ff6b6b; --alert-bg: #3a1519; --alert-fg: #1f0707;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1219; --surface: #121c26; --fg: #e8edf1; --muted: #8d9ca9; --line: #1f2c38;
+    --chip: #1a2733; --chip-sel: #3a2f08;
+    --accent: #e9b824; --accent-fg: #1a1400; --accent-ink: #f0c443;
+    --danger: #ff8a80; --hold-s: 60%; --hold-l: 62%; --hold-fg: #07131b;
+    --alert: #ff6b6b; --alert-bg: #3a1519; --alert-fg: #1f0707;
+    color-scheme: dark;
+  }
+  :root { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font-body); font-size: 16px; line-height: 1.4;
+    margin: 0;
+    padding-block: 12px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 720px; margin-inline: auto; display: flex; flex-direction: column; gap: 10px; }
+  h2 { font-size: 0.72rem; font-weight: 600; margin: 0; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+  button, input { font: inherit; color: inherit; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
+
+  .mode { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 12px; background: var(--surface); }
+  .mode button { min-height: 42px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.9rem; color: var(--muted); }
+  .mode button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+
+  .logbtn {
+    width: 100%; min-height: 58px; border: 0; border-radius: 12px;
+    background: var(--accent); color: var(--accent-fg);
+    font-size: 1.25rem; font-weight: 700; letter-spacing: 0.05em; cursor: pointer;
+  }
+  .logbtn:active { transform: translateY(1px); }
+
+  .now { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 0.85rem; color: var(--muted); margin-top: -4px; }
+  .now .txt { color: var(--fg); overflow-wrap: anywhere; }
+
+  .badge {
+    display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+    font-family: var(--font-mono); white-space: nowrap;
+    background: hsl(var(--hue, 0) var(--hold-s) var(--hold-l)); color: var(--hold-fg);
+  }
+  .badge.none { background: var(--chip); color: var(--muted); font-weight: 500; }
+
+  .panel { background: var(--surface); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .sub { font-size: 0.82rem; font-weight: 500; color: var(--muted); margin-bottom: -4px; }
+  .hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+  .holds { display: grid; grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); gap: 8px; }
+  .hbtn {
+    --hc: hsl(var(--hue) var(--hold-s) var(--hold-l));
+    min-height: 40px; border: 2px solid var(--hc); border-radius: 9px; background: transparent;
+    font-family: var(--font-mono); font-size: 1.05rem; font-weight: 600; cursor: pointer;
+  }
+  .hbtn[aria-pressed="true"] { background: var(--hc); color: var(--hold-fg); }
+
+  .shipcr { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .shipcr .tog { padding: 5px 4px; text-align: center; }
+  .tog {
+    min-height: 38px; padding: 5px 12px; background: var(--chip); cursor: pointer;
+    border: 1px solid transparent; border-radius: 9px; font-size: 0.92rem;
+  }
+  .tog[aria-pressed="true"] { background: var(--chip-sel); border-color: var(--accent-ink); font-weight: 600; }
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  .stepper .slabel { font-size: 0.92rem; }
+  .stepper button { width: 40px; height: 38px; border: 0; border-radius: 9px; background: var(--chip); font-size: 1.3rem; cursor: pointer; }
+  .stepper button:disabled { opacity: 0.35; cursor: default; }
+  .stepper output { min-width: 1.6em; text-align: center; font-family: var(--font-mono); font-size: 1.2rem; font-weight: 600; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .chips { display: flex; flex-direction: column; gap: 3px; }
+  .chip {
+    min-height: 31px; padding: 3px 9px; text-align: left; cursor: pointer; line-height: 1.2;
+    background: var(--chip); border: 1px solid transparent; border-radius: 8px;
+    overflow-wrap: anywhere; font-size: 0.88rem;
+  }
+  .chip[aria-pressed="true"] { background: var(--chip-sel); border-color: var(--accent-ink); font-weight: 600; }
+  .chip.alert { color: var(--alert); }
+  .chip.alert[aria-pressed="true"] { background: var(--alert-bg); border-color: var(--alert); }
+  .chip.emerg { background: var(--alert); color: var(--alert-fg); font-weight: 600; }
+  .chip.emerg[aria-pressed="true"] { outline: 3px solid var(--fg); outline-offset: 1px; }
+  .editing .cols { grid-template-columns: 1fr; }
+  .editonly { display: none; }
+  .editing .editonly { display: block; }
+  .erow { display: flex; gap: 4px; align-items: center; }
+  .erow input[type="text"] { flex: 1; min-height: 34px; padding: 3px 9px; font-size: 0.9rem; }
+  .erow button { width: 36px; min-height: 34px; padding: 0; border: 0; border-radius: 8px; background: var(--chip); font-size: 1rem; cursor: pointer; }
+  .erow button:disabled { opacity: 0.3; cursor: default; }
+  .erow .rm { color: var(--danger); }
+  .addrow { display: none; gap: 6px; }
+  .editing .addrow { display: flex; }
+  .addrow input { flex: 1; min-width: 0; }
+
+  input[type="text"], input[type="time"] {
+    min-height: 38px; padding: 5px 10px; background: var(--chip);
+    border: 1px solid transparent; border-radius: 9px; width: 100%; min-width: 0;
+  }
+  .small {
+    min-height: 34px; padding: 4px 10px; background: var(--chip); cursor: pointer;
+    border: 0; border-radius: 9px; font-size: 0.9rem;
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .spread { justify-content: space-between; }
+  .preview { font-size: 0.82rem; color: var(--muted); overflow-wrap: anywhere; }
+  .preview strong { color: var(--fg); font-weight: 500; }
+  label.check { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; min-height: 30px; cursor: pointer; color: var(--muted); }
+  label.check input { width: 20px; height: 20px; accent-color: var(--accent-ink); }
+
+  .ft { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ftcell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .ftcell label { font-size: 0.78rem; color: var(--muted); }
+  .ftcell .row { flex-wrap: nowrap; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { min-height: 32px; padding: 3px 11px; background: var(--chip); border: 0; border-radius: 999px; font-size: 0.85rem; cursor: pointer; }
+
+  .pick { width: 100%; min-height: 40px; padding: 6px 30px 6px 10px; background-color: var(--chip); border: 1px solid transparent; border-radius: 9px; font: inherit; color: inherit; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%238d9ca9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; text-overflow: ellipsis; }
+  .pick.alert { color: var(--alert); }
+  .pick.emerg { background-color: var(--alert); color: var(--alert-fg); font-weight: 600; }
+  .row > .pick { flex: 1; width: auto; min-width: 0; }
+  .editing .pick { display: none; }
+  select:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
+  .swatch { flex: none; width: 10px; height: 40px; border-radius: 5px; background: var(--line); }
+  .swatch.on { background: hsl(var(--hue) var(--hold-s) var(--hold-l)); }
+
+  .flag { color: var(--alert); font-weight: 600; }
+  .flag.emerg { text-transform: uppercase; letter-spacing: 0.03em; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge.emergency { background: var(--alert); color: var(--alert-fg); }
+
+  .entries { display: flex; flex-direction: column; }
+  .dategroup { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); padding: 8px 0 4px; }
+  .dategroup:first-child { padding-top: 0; }
+  .entry {
+    --hc: var(--line);
+    display: grid; grid-template-columns: 4.6rem 1fr auto; gap: 10px; align-items: start;
+    padding: 8px 0 8px 10px; border-top: 1px solid var(--line); border-left: 4px solid var(--hc);
+  }
+  .entry.has-hold { --hc: hsl(var(--hue) var(--hold-s) var(--hold-l)); }
+  .dategroup + .entry { border-top: 0; }
+  .entry.emergency { background: var(--alert-bg); padding-right: 8px; border-radius: 0 8px 8px 0; }
+  .when { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .when .t { font-size: 1rem; font-weight: 600; display: block; white-space: nowrap; }
+  .when .u { display: block; font-size: 0.85rem; }
+  .when .d { display: block; font-size: 0.74rem; color: var(--muted); }
+  .body { min-width: 0; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+  .what { overflow-wrap: anywhere; }
+  .what.none { color: var(--muted); font-style: italic; }
+  .crane { font-size: 0.8rem; color: var(--muted); overflow-wrap: anywhere; }
+  .del { min-height: 32px; padding: 3px 9px; background: transparent; border: 0; border-radius: 8px; color: var(--muted); font-size: 0.78rem; cursor: pointer; }
+  .del.armed, .danger.armed { color: var(--danger); }
+  .empty { color: var(--muted); padding: 8px 0; }
+
+  .copygrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .primary { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  #manual { display: none; flex-direction: column; gap: 6px; }
+  #manual.show { display: flex; }
+  #manual textarea { width: 100%; min-height: 110px; font-family: var(--font-mono); font-size: 0.85rem; background: var(--chip); color: var(--fg); border: 0; border-radius: 9px; padding: 8px; }
+
+  #toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 9px;
+    font-size: 0.9rem; opacity: 0; pointer-events: none; transition: opacity 0.15s; max-width: calc(100% - 32px);
+  }
+  #toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+  @media (max-width: 380px) { .entry { grid-template-columns: 4.2rem 1fr auto; } }
+</style>
+</head><body>
+<div class="wrap">
+  <div class="mode" role="group" aria-label="Operation">
+    <button type="button" id="mLoad" aria-pressed="true">Loading</button>
+    <button type="button" id="mDisch" aria-pressed="false">Discharging</button>
+  </div>
+
+  <section class="panel" id="composer" aria-label="Events and details">
+    <p class="hint editonly">Rename in the box, move with the arrows, remove with &times;. Add new ones at the bottom of each list. Keep the names Commence, Start, Stop, Finish and Completion so Loading or Discharging and the Stop pairing keep working.</p>
+    <div class="cols">
+      <div class="col">
+        <h2>Events</h2>
+        <select class="pick" id="selA" aria-label="Event"></select>
+        <div class="chips" id="chipsA"></div>
+        <div class="addrow"><input type="text" id="addA" placeholder="New option" aria-label="New option for Events"><button class="small" type="button" data-add="a">Add</button></div>
+      </div>
+      <div class="col">
+        <h2>Details</h2>
+        <select class="pick" id="selB" aria-label="Detail"></select>
+        <div class="chips" id="chipsB"></div>
+        <div class="addrow"><input type="text" id="addB" placeholder="New option" aria-label="New option for Details"><button class="small" type="button" data-add="b">Add</button></div>
+      </div>
+    </div>
+    <input type="text" id="custom" placeholder="Or type your own comment" aria-label="Custom comment" autocomplete="off">
+    <div class="preview" id="preview"></div>
+    <div class="row spread">
+      <label class="check"><input type="checkbox" id="manualOn"> Set time manually</label>
+      <button class="small" id="editToggle" type="button">Edit options</button>
+    </div>
+    <input type="time" id="manualTime" hidden aria-label="Manual time">
+  </section>
+
+  <button class="logbtn" id="log" type="button">LOG NOW</button>
+  <div class="now" id="now"></div>
+
+  <section class="panel" aria-label="From and to">
+    <h2>From - To (continuous work)</h2>
+    <div class="ft">
+      <div class="ftcell">
+        <label for="ftFrom">From</label>
+        <div class="row"><input type="time" id="ftFrom"><button class="small" type="button" data-now="ftFrom">Now</button></div>
+      </div>
+      <div class="ftcell">
+        <label for="ftTo">To</label>
+        <div class="row"><input type="time" id="ftTo"><button class="small" type="button" data-now="ftTo">Now</button></div>
+      </div>
+    </div>
+    <select class="pick" id="ftSel" aria-label="Quick pick"></select>
+    <input type="text" id="ftText" placeholder="Description (blank = Continue Loading)" aria-label="Description" autocomplete="off">
+    <button class="small primary" id="ftAdd" type="button">Add From - To</button>
+  </section>
+
+  <section class="panel" aria-label="Log">
+    <div class="row spread">
+      <h2 id="count">Log</h2>
+      <button class="small danger" id="clear" type="button">Clear all</button>
+    </div>
+    <div class="entries" id="entries"></div>
+  </section>
+
+  <section class="panel" aria-label="Hold and cranes">
+    <h2>Hold and cranes</h2>
+    <p class="hint">Stays on every new log line until you change it.</p>
+    <div class="sub">Cargo hold</div>
+    <div class="row"><span class="swatch" id="holdSw"></span><select class="pick" id="holdSel" aria-label="Cargo hold"></select></div>
+    <div class="sub">Ship cranes working</div>
+    <div class="shipcr" id="shipCr"></div>
+    <div class="stepper">
+      <span class="slabel">Shore cranes working</span>
+      <button id="shMinus" type="button" aria-label="Fewer shore cranes">&minus;</button>
+      <output id="shVal" aria-live="polite">0</output>
+      <button id="shPlus" type="button" aria-label="More shore cranes">+</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Copy">
+    <h2>Copy</h2>
+    <p class="hint">Excel columns: Date, Time, To, Hold, Cranes, Comment. Oldest entry first.</p>
+    <button class="small primary" id="copyAll" type="button">Copy all for Excel</button>
+    <button class="small" id="copyLines" type="button">Copy as text lines (08:00 - Start Loading)</button>
+    <div class="copygrid">
+      <button class="small" id="copyDate" type="button">Dates</button>
+      <button class="small" id="copyTime" type="button">Times</button>
+      <button class="small" id="copyText" type="button">Comments</button>
+      <button class="small" id="copyHold" type="button">Holds</button>
+      <button class="small" id="copyCrane" type="button">Cranes</button>
+    </div>
+    <div id="manual">
+      <p class="hint">Your phone blocked automatic copying. Press and hold in the box, select all, then copy.</p>
+      <textarea id="manualText" readonly></textarea>
+    </div>
+  </section>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var KEY_E = 'pwl.entries.v1', KEY_O = 'pwl.options.v1', KEY_C = 'pwl.ctx.v1';
+  var DEFAULTS = {
+    a: ['Commence', 'Start', 'Stop', 'Open Hatch', 'Close Hatch', 'Crane Unlashed', 'Crane Ready', 'Crane Secured', 'Stevedores on', 'Stevedores off', 'Finish', 'Completion'],
+    b: ['Waiting for cargo', 'Breaktime', 'Shift Change', 'Airbagging/Shoring', 'Start raining', 'Stopped raining', 'Authority', 'Visitor', 'Damage', 'Injury', 'No Operations', 'Emergency']
+  };
+  // Defaults from earlier versions, so options added by the user can be kept when the lists change.
+  var OLD_A = ['Emergency', 'Stevedores onboard', 'Stevedores left ship', 'Cargo loading commenced', 'Cargo loading stopped', 'Waiting cargo to resume loading', 'Cargo loading resumed', 'Hatch opened', 'Hatch closed', 'Start Loading', 'Stop Loading', 'Stevedores on', 'Stevedores off', 'Commenced Loading', 'Finished Loading', 'Crane Ready', 'Open Hatch'];
+  var OLD_B = ['Breaktime', 'Shift change', 'Rain', 'Waiting for trucks', 'Waiting for cargo', 'Crane breakdown', 'Surveyor onboard', 'Lashing', 'Waiting cargo', 'Airbagging/Shoring', 'Shift Change', 'Rain stopped', 'Cargo Damage', 'Emergency', 'Authority Onboard'];
+  var SUFFIX = ['Commence', 'Start', 'Stop', 'Finish'];
+  var FT_PRESETS = ['Crane Preparation', 'Waiting for cargo', 'Breaktime', 'No Operations'];
+  var HUES = [25, 50, 80, 120, 155, 185, 215, 245, 275, 305, 325]; // holds 1 to 11, none near red (red is reserved for alerts)
+  var MAX_SHORE = 9;
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function load(k, fb) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } }
+  function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+  var entries = load(KEY_E, []);
+  if (!Array.isArray(entries)) entries = [];
+  var seqCounter = entries.reduce(function (m, e) { return Math.max(m, e.seq || 0); }, 0);
+  var opts = load(KEY_O, null);
+  if (!opts || !Array.isArray(opts.a) || !Array.isArray(opts.b)) opts = JSON.parse(JSON.stringify(DEFAULTS));
+  if (opts.mig !== 5) {
+    if (opts.mig === 4) {
+      // Add the three newer events after their neighbours, keeping any changes the user made.
+      [['Close Hatch', 'Open Hatch'], ['Crane Unlashed', 'Close Hatch'], ['Crane Secured', 'Crane Ready']].forEach(function (pair) {
+        if (opts.a.indexOf(pair[0]) > -1) return;
+        var at = opts.a.indexOf(pair[1]);
+        if (at > -1) opts.a.splice(at + 1, 0, pair[0]); else opts.a.push(pair[0]);
+      });
+      opts.mig = 5;
+    } else {
+      var keepA = opts.a.filter(function (x) { return OLD_A.indexOf(x) === -1 && DEFAULTS.a.indexOf(x) === -1; });
+      var keepB = opts.b.filter(function (x) { return OLD_B.indexOf(x) === -1 && DEFAULTS.b.indexOf(x) === -1; });
+      opts = { a: DEFAULTS.a.concat(keepA), b: DEFAULTS.b.concat(keepB), mig: 5 };
+    }
+    save(KEY_O, opts);
+  }
+  var ctx = load(KEY_C, null);
+  if (!ctx || typeof ctx !== 'object') ctx = {};
+  ctx = {
+    mode: ctx.mode === 'Discharging' ? 'Discharging' : 'Loading',
+    hold: (ctx.hold >= 1 && ctx.hold <= 11) ? ctx.hold : null,
+    cr: shipCranes(ctx),
+    shore: (ctx.shore >= 0 && ctx.shore <= MAX_SHORE) ? Math.floor(ctx.shore) : 0
+  };
+  var sel = { a: [], b: [] };
+  var editing = false;
+
+  var $ = function (id) { return document.getElementById(id); };
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function fmtDate(ts) { var d = new Date(ts); return pad(d.getDate()) + '-' + MON[d.getMonth()] + '-' + d.getFullYear(); }
+  function fmtTime(ts) { var d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function nowTime() { return fmtTime(Date.now()); }
+  function clean(s) { return String(s || '').replace(/[\t\r\n]+/g, ' ').trim(); }
+  // Ship cranes 1 to 4. Older entries stored Gantry Crane 1 and 2 as g1 and g2, which map to 1 and 2.
+  function shipCranes(o) {
+    var out = [];
+    if (Array.isArray(o.cr)) o.cr.forEach(function (n) { n = +n; if (n >= 1 && n <= 4 && out.indexOf(n) === -1) out.push(n); });
+    else { if (o.g1) out.push(1); if (o.g2) out.push(2); }
+    return out.sort();
+  }
+  function craneText(o) {
+    var p = [], c = shipCranes(o);
+    if (c.length) p.push((c.length === 1 ? 'Ship crane ' : 'Ship cranes ') + c.join(', '));
+    if (o.shore > 0) p.push('Shore crane x' + o.shore);
+    return p.join(', ');
+  }
+  var RE_RED = /^(commence|completion)$|\bcommence (loading|discharging)\b|\bcompletion of (loading|discharging)\b/i;
+  var RE_EMERG = /emergency/i;
+  var RE_START = /\b(start|commence) (loading|discharging)\b/i;
+  var RE_STOP = /\bstop (loading|discharging)\b/i;
+  function flagOf(s) { return RE_EMERG.test(s) ? 'emerg' : (RE_RED.test(s) ? 'red' : ''); }
+  function newId(ts) { return ts + '-' + Math.random().toString(36).slice(2, 7); }
+  function nextSeq() { seqCounter += 1; return seqCounter; }
+  function sorted() { return entries.slice().sort(function (x, y) { return (x.ts - y.ts) || ((x.seq || 0) - (y.seq || 0)); }); }
+  function durText(ms) {
+    var m = Math.max(0, Math.round(ms / 60000));
+    if (m < 60) return m + ' min';
+    var h = Math.floor(m / 60), r = m % 60;
+    return h + 'h' + (r ? ' ' + r + 'm' : '');
+  }
+
+  // Phone's current date. A time later than now (by more than 5 minutes) is taken as yesterday, for watches that cross midnight.
+  function resolveTs(v) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(v || '');
+    if (!m) return NaN;
+    var now = new Date();
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +m[1], +m[2], 0, 0);
+    if (d.getTime() > now.getTime() + 5 * 60000) d.setDate(d.getDate() - 1);
+    return d.getTime();
+  }
+
+  function eventText(label) {
+    if (SUFFIX.indexOf(label) > -1) return label + ' ' + ctx.mode;
+    if (label === 'Completion') return 'Completion of ' + ctx.mode;
+    return label;
+  }
+
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  function arm(btn, idle, armedText, action) {
+    var timer;
+    btn.addEventListener('click', function () {
+      if (btn.classList.contains('armed')) {
+        clearTimeout(timer); btn.classList.remove('armed'); btn.textContent = idle; action();
+      } else {
+        btn.classList.add('armed'); btn.textContent = armedText;
+        timer = setTimeout(function () { btn.classList.remove('armed'); btn.textContent = idle; }, 3000);
+      }
+    });
+  }
+
+  function makeBadge(hold) {
+    var b = document.createElement('span');
+    if (hold) { b.className = 'badge'; b.textContent = 'Hold ' + hold; b.style.setProperty('--hue', HUES[hold - 1]); }
+    else { b.className = 'badge none'; b.textContent = 'No hold'; }
+    return b;
+  }
+
+  function renderMode() {
+    $('mLoad').setAttribute('aria-pressed', ctx.mode === 'Loading' ? 'true' : 'false');
+    $('mDisch').setAttribute('aria-pressed', ctx.mode === 'Discharging' ? 'true' : 'false');
+    $('ftText').setAttribute('placeholder', 'Description (blank = Continue ' + ctx.mode + ')');
+    renderPills(); renderPreview();
+  }
+
+  function renderPills() {
+    var s = $('ftSel'); s.textContent = '';
+    var o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Quick pick'; s.appendChild(o0);
+    ['Continue ' + ctx.mode].concat(FT_PRESETS).forEach(function (label) {
+      var o = document.createElement('option'); o.value = label; o.textContent = label; s.appendChild(o);
+    });
+  }
+
+  function renderCtx() {
+    var hs = $('holdSel');
+    if (!hs.options.length) {
+      var h0 = document.createElement('option'); h0.value = ''; h0.textContent = 'No hold'; hs.appendChild(h0);
+      for (var n = 1; n <= 11; n++) { var ho = document.createElement('option'); ho.value = n; ho.textContent = 'Hold ' + n; hs.appendChild(ho); }
+    }
+    hs.value = ctx.hold ? String(ctx.hold) : '';
+    var sw = $('holdSw');
+    if (ctx.hold) { sw.style.setProperty('--hue', HUES[ctx.hold - 1]); sw.className = 'swatch on'; } else { sw.className = 'swatch'; }
+    var sc = $('shipCr'); sc.textContent = '';
+    for (var c = 1; c <= 4; c++) {
+      (function (c) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'tog'; b.textContent = 'Crane ' + c;
+        b.setAttribute('aria-pressed', ctx.cr.indexOf(c) > -1 ? 'true' : 'false');
+        b.addEventListener('click', function () {
+          var i = ctx.cr.indexOf(c);
+          if (i > -1) ctx.cr.splice(i, 1); else { ctx.cr.push(c); ctx.cr.sort(); }
+          save(KEY_C, ctx); renderCtx();
+        });
+        sc.appendChild(b);
+      })(c);
+    }
+    $('shVal').textContent = ctx.shore;
+    $('shMinus').disabled = ctx.shore <= 0;
+    $('shPlus').disabled = ctx.shore >= MAX_SHORE;
+
+    var now = $('now'); now.textContent = '';
+    now.appendChild(document.createTextNode('Logging with'));
+    now.appendChild(makeBadge(ctx.hold));
+    var ct = craneText(ctx);
+    var s = document.createElement('span'); s.className = 'txt'; s.textContent = ct || 'No cranes';
+    now.appendChild(s);
+  }
+
+  function composed() {
+    var parts = sel.a.map(eventText).concat(sel.b);
+    var c = clean($('custom').value);
+    if (c) parts.push(c);
+    return parts.join(', ');
+  }
+  function renderPreview() {
+    var p = $('preview'), txt = composed();
+    p.textContent = '';
+    if (txt) { p.appendChild(document.createTextNode('Will log: ')); var s = document.createElement('strong'); s.textContent = txt; p.appendChild(s); }
+    else p.textContent = 'No comment. Logs time, hold and cranes.';
+  }
+
+  function moveOpt(k, i, d) {
+    var j = i + d;
+    if (j < 0 || j >= opts[k].length) return;
+    var t = opts[k][i]; opts[k][i] = opts[k][j]; opts[k][j] = t;
+    save(KEY_O, opts); renderChips();
+  }
+  // Edit mode: one row per option with a name box (rename), up and down arrows (reposition) and a remove button.
+  function renderRows(k, box) {
+    opts[k].forEach(function (label, i) {
+      var r = document.createElement('div'); r.className = 'erow';
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.value = label; inp.setAttribute('aria-label', 'Option name');
+      inp.addEventListener('change', function () {
+        var v = clean(inp.value);
+        if (!v || v === label) { inp.value = label; return; }
+        if (opts[k].indexOf(v) > -1) { toast('That option already exists'); inp.value = label; return; }
+        opts[k][i] = v;
+        sel[k] = sel[k].map(function (x) { return x === label ? v : x; });
+        save(KEY_O, opts); renderChips();
+      });
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') inp.blur(); });
+      function mk(txt, aria, cls, fn, dis) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.textContent = txt; b.setAttribute('aria-label', aria);
+        if (cls) b.className = cls;
+        b.disabled = !!dis;
+        b.addEventListener('click', fn);
+        return b;
+      }
+      r.appendChild(inp);
+      r.appendChild(mk('↑', 'Move up', '', function () { moveOpt(k, i, -1); }, i === 0));
+      r.appendChild(mk('↓', 'Move down', '', function () { moveOpt(k, i, 1); }, i === opts[k].length - 1));
+      r.appendChild(mk('×', 'Remove', 'rm', function () {
+        opts[k].splice(i, 1);
+        sel[k] = sel[k].filter(function (x) { return x !== label; });
+        save(KEY_O, opts); renderChips();
+      }, false));
+      box.appendChild(r);
+    });
+  }
+
+  function stylePick(k) {
+    var s = $(k === 'a' ? 'selA' : 'selB'), f = s.value ? flagOf(s.value) : '';
+    s.className = 'pick' + (f === 'emerg' ? ' emerg' : (f === 'red' ? ' alert' : ''));
+  }
+  function renderChips() {
+    $('composer').classList.toggle('editing', editing);
+    ['a', 'b'].forEach(function (k) {
+      var s = $(k === 'a' ? 'selA' : 'selB'), box = $(k === 'a' ? 'chipsA' : 'chipsB');
+      box.textContent = ''; s.textContent = '';
+      var o0 = document.createElement('option'); o0.value = ''; o0.textContent = k === 'a' ? 'Choose event' : 'Choose detail'; s.appendChild(o0);
+      opts[k].forEach(function (label) { var o = document.createElement('option'); o.value = label; o.textContent = label; s.appendChild(o); });
+      s.value = sel[k][0] || '';
+      if (s.value !== (sel[k][0] || '')) { sel[k] = []; s.value = ''; }
+      stylePick(k);
+      if (editing) renderRows(k, box);
+    });
+    renderPreview();
+  }
+
+  function renderEntries() {
+    var box = $('entries'); box.textContent = '';
+    $('count').textContent = 'Log (' + entries.length + ')';
+    $('clear').hidden = entries.length === 0;
+    if (!entries.length) {
+      var e = document.createElement('div'); e.className = 'empty';
+      e.textContent = 'No entries yet. Press LOG NOW to record the time of the next event.';
+      box.appendChild(e); return;
+    }
+    // The hold and crane details are shown on a line only when they change, so the log stays quiet.
+    var lastDate = '', prevHold = null, prevCt = '';
+    sorted().forEach(function (en) {
+      var dk = fmtDate(en.ts);
+      if (dk !== lastDate) {
+        var dg = document.createElement('div'); dg.className = 'dategroup'; dg.textContent = dk;
+        box.appendChild(dg); lastDate = dk; prevHold = null; prevCt = '';
+      }
+      var row = document.createElement('div');
+      var isEm = RE_EMERG.test(en.text || '');
+      row.className = 'entry' + (en.hold ? ' has-hold' : '') + (isEm ? ' emergency' : '');
+      if (en.hold) row.style.setProperty('--hue', HUES[en.hold - 1]);
+      var w = document.createElement('div'); w.className = 'when';
+      var t = document.createElement('span'); t.className = 't';
+      t.textContent = fmtTime(en.ts);
+      w.appendChild(t);
+      if (en.to) {
+        var u = document.createElement('span'); u.className = 'u'; u.textContent = 'to ' + fmtTime(en.to); w.appendChild(u);
+        var d = document.createElement('span'); d.className = 'd'; d.textContent = durText(en.to - en.ts); w.appendChild(d);
+      }
+      var body = document.createElement('div'); body.className = 'body';
+      var curHold = en.hold || null, ct = craneText(en);
+      var tags = document.createElement('div'); tags.className = 'tags';
+      if (curHold !== prevHold) tags.appendChild(makeBadge(curHold));
+      if (isEm) { var eb = document.createElement('span'); eb.className = 'badge emergency'; eb.textContent = 'EMERGENCY'; tags.appendChild(eb); }
+      if (tags.childNodes.length) body.appendChild(tags);
+      var c = document.createElement('div'); c.className = 'what' + (en.text ? '' : ' none');
+      if (en.text) {
+        en.text.split(', ').forEach(function (part, i) {
+          if (i) c.appendChild(document.createTextNode(', '));
+          var f = flagOf(part), sp = document.createElement('span');
+          sp.textContent = part;
+          if (f) sp.className = 'flag' + (f === 'emerg' ? ' emerg' : '');
+          c.appendChild(sp);
+        });
+      } else c.textContent = 'No comment';
+      body.appendChild(c);
+      if (ct !== prevCt) { var cr = document.createElement('div'); cr.className = 'crane'; cr.textContent = ct || 'No cranes'; body.appendChild(cr); }
+      prevHold = curHold; prevCt = ct;
+      var del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = 'Delete';
+      arm(del, 'Delete', 'Tap again', function () {
+        entries = entries.filter(function (x) { return x.id !== en.id && x.pairId !== en.id; });
+        save(KEY_E, entries); renderEntries();
+      });
+      row.appendChild(w); row.appendChild(body); row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+
+  // The latest Start or Commence that has not been closed by a Stop, up to the given time.
+  function findOpenStart(stopTs, excludeId) {
+    var open = null;
+    sorted().forEach(function (en) {
+      if (en.to || en.id === excludeId || en.ts > stopTs) return;
+      if (RE_START.test(en.text || '')) open = en;
+      if (RE_STOP.test(en.text || '')) open = null;
+    });
+    return open;
+  }
+
+  function doLog() {
+    var ts = Date.now();
+    if ($('manualOn').checked) {
+      ts = resolveTs($('manualTime').value);
+      if (isNaN(ts)) { toast('Set the time first'); return; }
+    }
+    var wasStop = sel.a.indexOf('Stop') > -1;
+    var en = { id: newId(ts), ts: ts, text: composed(), hold: ctx.hold, cr: ctx.cr.slice(), shore: ctx.shore, seq: nextSeq() };
+    entries.push(en);
+    var msg = 'Logged ' + fmtTime(ts);
+    if (wasStop) {
+      var open = findOpenStart(ts, en.id);
+      if (open) {
+        entries.push({ id: newId(open.ts), ts: open.ts, to: ts, text: 'Continue ' + ctx.mode, hold: open.hold, cr: shipCranes(open), shore: open.shore, seq: nextSeq(), pairId: en.id });
+        msg += ' and Continue ' + fmtTime(open.ts) + '-' + fmtTime(ts);
+      }
+    }
+    save(KEY_E, entries);
+    sel = { a: [], b: [] }; $('custom').value = '';
+    $('manualOn').checked = false; $('manualTime').hidden = true;
+    renderChips(); renderEntries();
+    toast(msg);
+  }
+
+  function doRange() {
+    var f = resolveTs($('ftFrom').value), t = resolveTs($('ftTo').value);
+    if (isNaN(f) || isNaN(t)) { toast('Set both From and To'); return; }
+    if (t < f) { toast('To is earlier than From'); return; }
+    var text = clean($('ftText').value) || ('Continue ' + ctx.mode);
+    entries.push({ id: newId(f), ts: f, to: t, text: text, hold: ctx.hold, cr: ctx.cr.slice(), shore: ctx.shore, seq: nextSeq() });
+    save(KEY_E, entries);
+    $('ftFrom').value = $('ftTo').value; $('ftTo').value = ''; $('ftText').value = '';
+    renderEntries();
+    toast('Added ' + fmtTime(f) + ' - ' + fmtTime(t));
+  }
+
+  function copyText(text, label) {
+    if (!entries.length) { toast('Nothing to copy yet'); return; }
+    function fallback() {
+      var ta = $('manualText'); ta.value = text; $('manual').classList.add('show');
+      ta.focus(); ta.select();
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        $('manual').classList.remove('show'); toast('Copied ' + label);
+      }, fallback);
+    } catch (e) { fallback(); }
+  }
+  function col(fn) { return sorted().map(fn).join('\n'); }
+  function textLines() {
+    var list = sorted(), seen = {}, multi = false;
+    list.forEach(function (e) { seen[fmtDate(e.ts)] = 1; });
+    multi = Object.keys(seen).length > 1;
+    var out = [], last = '';
+    list.forEach(function (e) {
+      var dk = fmtDate(e.ts);
+      if (multi && dk !== last) { if (out.length) out.push(''); out.push(dk); last = dk; }
+      var line = fmtTime(e.ts) + (e.to ? ' - ' + fmtTime(e.to) : '');
+      var tx = clean(e.text);
+      out.push(line + (tx ? ' - ' + tx : ''));
+    });
+    return out.join('\n');
+  }
+
+  ['a', 'b'].forEach(function (k) {
+    $(k === 'a' ? 'selA' : 'selB').addEventListener('change', function () {
+      sel[k] = this.value ? [this.value] : []; stylePick(k); renderPreview();
+    });
+  });
+  $('holdSel').addEventListener('change', function () { ctx.hold = this.value ? parseInt(this.value, 10) : null; save(KEY_C, ctx); renderCtx(); });
+  $('ftSel').addEventListener('change', function () { if (this.value) $('ftText').value = this.value; this.value = ''; });
+  $('mLoad').addEventListener('click', function () { ctx.mode = 'Loading'; save(KEY_C, ctx); renderMode(); });
+  $('mDisch').addEventListener('click', function () { ctx.mode = 'Discharging'; save(KEY_C, ctx); renderMode(); });
+  $('log').addEventListener('click', doLog);
+  $('ftAdd').addEventListener('click', doRange);
+  $('custom').addEventListener('input', renderPreview);
+  $('custom').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLog(); });
+  $('editToggle').addEventListener('click', function () {
+    editing = !editing; this.textContent = editing ? 'Done' : 'Edit options'; renderChips();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-add]'), function (b) {
+    function add() {
+      var k = b.getAttribute('data-add'), inp = $(k === 'a' ? 'addA' : 'addB'), v = clean(inp.value);
+      if (!v) return;
+      if (opts[k].indexOf(v) === -1) opts[k].push(v);
+      inp.value = ''; save(KEY_O, opts); renderChips();
+    }
+    b.addEventListener('click', add);
+    $(b.getAttribute('data-add') === 'a' ? 'addA' : 'addB').addEventListener('keydown', function (e) { if (e.key === 'Enter') add(); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-now]'), function (b) {
+    b.addEventListener('click', function () { $(b.getAttribute('data-now')).value = nowTime(); });
+  });
+  $('shMinus').addEventListener('click', function () { if (ctx.shore > 0) { ctx.shore--; save(KEY_C, ctx); renderCtx(); } });
+  $('shPlus').addEventListener('click', function () { if (ctx.shore < MAX_SHORE) { ctx.shore++; save(KEY_C, ctx); renderCtx(); } });
+  $('manualOn').addEventListener('change', function () {
+    var on = this.checked; $('manualTime').hidden = !on;
+    if (on) $('manualTime').value = nowTime();
+  });
+  arm($('clear'), 'Clear all', 'Tap again to clear', function () { entries = []; save(KEY_E, entries); renderEntries(); toast('Log cleared'); });
+
+  $('copyAll').addEventListener('click', function () {
+    var rows = ['Date\tTime\tTo\tHold\tCranes\tComment'].concat(sorted().map(function (e) {
+      return fmtDate(e.ts) + '\t' + fmtTime(e.ts) + '\t' + (e.to ? fmtTime(e.to) : '') + '\t' + (e.hold || '') + '\t' + craneText(e) + '\t' + clean(e.text);
+    }));
+    copyText(rows.join('\n'), 'all entries');
+  });
+  $('copyLines').addEventListener('click', function () { copyText(textLines(), 'text lines'); });
+  $('copyDate').addEventListener('click', function () { copyText(col(function (e) { return fmtDate(e.ts); }), 'dates'); });
+  $('copyTime').addEventListener('click', function () { copyText(col(function (e) { return fmtTime(e.ts) + '\t' + (e.to ? fmtTime(e.to) : ''); }), 'times'); });
+  $('copyHold').addEventListener('click', function () { copyText(col(function (e) { return e.hold || ''; }), 'holds'); });
+  $('copyCrane').addEventListener('click', function () { copyText(col(function (e) { return craneText(e); }), 'cranes'); });
+  $('copyText').addEventListener('click', function () { copyText(col(function (e) { return clean(e.text); }), 'comments'); });
+
+  renderCtx(); renderChips(); renderEntries(); renderMode();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
+</body></html>

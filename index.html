@@ -298,7 +298,7 @@
 
   <section class="panel" aria-label="Copy">
     <h2>Copy</h2>
-    <p class="hint">Excel columns: Date, Time, To, Hold, Cranes, Comment. Oldest entry first.</p>
+    <p class="hint">Excel columns: Date, Time, To, Hold, Cranes, Comment. Oldest entry first. The Excel file has an All entries sheet plus one sheet per cargo hold.</p>
     <button class="small primary" id="dlXlsx" type="button">Download Excel (.xlsx)</button>
     <button class="small" id="copyAll" type="button">Copy all for Excel</button>
     <button class="small" id="copyLines" type="button">Copy as text lines (08:00 - Start Loading)</button>
@@ -862,28 +862,39 @@
     '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' +
     '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
     '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  // One sheet with every entry, then one sheet per cargo hold (and "No hold" for lines without one).
   function buildXlsx() {
     var head = ['Date', 'Time', 'To', 'Hold', 'Cranes', 'Comment'].map(function (v) { return { v: v, s: 1 }; });
-    var rows = [head].concat(sorted().map(function (e) {
-      var tx = clean(e.text), red = flagOf(tx) || tx.split(', ').some(function (p) { return flagOf(p); });
+    function line(e) {
+      var tx = clean(e.text), red = tx.split(', ').some(function (p) { return flagOf(p); });
       return [fmtDate(e.ts), fmtTime(e.ts), e.to ? fmtTime(e.to) : '', e.hold || '', craneText(e), red ? { v: tx, s: 2 } : tx];
-    }));
+    }
+    var all = sorted(), sheets = [{ name: 'All entries', rows: [head].concat(all.map(line)) }];
+    for (var n = 1; n <= 11; n++) {
+      var hs = all.filter(function (e) { return e.hold === n; });
+      if (hs.length) sheets.push({ name: 'Hold ' + n, rows: [head].concat(hs.map(line)) });
+    }
+    var none = all.filter(function (e) { return !e.hold; });
+    if (none.length && none.length < all.length) sheets.push({ name: 'No hold', rows: [head].concat(none.map(line)) });
+    var W = [13, 7, 7, 6, 26, 48];
     var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
       '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
       '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
-      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+      sheets.map(function (_, i) { return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') +
       '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
     var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
-    var wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Port Watch Log" sheetId="1" r:id="rId1"/></sheets></workbook>';
+    var wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+      sheets.map(function (sh, i) { return '<sheet name="' + sh.name + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets></workbook>';
     var wbr = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
-      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
-    return zip([
+      sheets.map(function (_, i) { return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') +
+      '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    var files = [
       { name: '[Content_Types].xml', data: ct }, { name: '_rels/.rels', data: rels },
       { name: 'xl/workbook.xml', data: wb }, { name: 'xl/_rels/workbook.xml.rels', data: wbr },
-      { name: 'xl/styles.xml', data: STYLES },
-      { name: 'xl/worksheets/sheet1.xml', data: sheetXml(rows, [13, 7, 7, 6, 26, 48]) }
-    ]);
+      { name: 'xl/styles.xml', data: STYLES }
+    ];
+    sheets.forEach(function (sh, i) { files.push({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: sheetXml(sh.rows, W) }); });
+    return zip(files);
   }
   $('dlXlsx').addEventListener('click', function () {
     if (!entries.length) { toast('Nothing to export yet'); return; }

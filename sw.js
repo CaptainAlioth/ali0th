@@ -1,6 +1,6 @@
-var CACHE = 'pwl-v6';
-// File names must match the repository exactly (GitHub Pages is case-sensitive: .PNG not .png).
-var FILES = ['./', './index.html', './cargo-record.html', './manifest.webmanifest', './icon-192.PNG', './icon-512.PNG'];
+var CACHE = 'pwl-v7';
+// File names must match the repository exactly (GitHub Pages is case-sensitive).
+var FILES = ['./', './index.html', './cargo-record.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './cargo.webmanifest', './cargo-192.png', './cargo-512.png'];
 self.addEventListener('install', function (e) {
   // Each file is saved on its own, so one missing file can no longer stop the whole offline copy.
   e.waitUntil(caches.open(CACHE).then(function (c) {

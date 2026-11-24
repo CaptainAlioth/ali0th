@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<meta name="theme-color" content="#14181d">
+<meta name="theme-color" content="#0B2545">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Station Bill Generator</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -20,11 +20,15 @@
    PICTURE: the A4 card itself, live, with red alarm signals
    COLOUR and TYPE: paper white, ink, signal red; Barlow / Barlow Condensed
    LAYOUT: phone first, bottom tabs, preview on top, editors below */
-:root{--sans:Barlow,"Avenir Next","Segoe UI",Roboto,system-ui,sans-serif;--cond:"Barlow Condensed","Avenir Next Condensed","Roboto Condensed","Arial Narrow",sans-serif-condensed,Arial,sans-serif;color-scheme:light dark;--bg:light-dark(#e9ecef,#101317);--card:light-dark(#fff,#1b2026);--ink:light-dark(#14181d,#e8ebee);--mut:light-dark(#5b636d,#9aa3ad);--line:light-dark(#d5d9de,#2e353d);--red:#d42a20;--redbg:light-dark(#fdecea,#3a1714);--bar:#14181d}
+:root{--sans:Barlow,"Avenir Next","Segoe UI",Roboto,system-ui,sans-serif;--cond:"Barlow Condensed","Avenir Next Condensed","Roboto Condensed","Arial Narrow",sans-serif-condensed,Arial,sans-serif;color-scheme:light dark;--bg:light-dark(#e9ecef,#101317);--card:light-dark(#fff,#1b2026);--ink:light-dark(#14181d,#e8ebee);--mut:light-dark(#5b636d,#9aa3ad);--line:light-dark(#d5d9de,#2e353d);--red:#d42a20;--brand:#005FDC;--navy:#0B2545;--redbg:light-dark(#fdecea,#3a1714);--bar:#0B2545}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);overflow-x:clip;-webkit-text-size-adjust:100%}
 header.top{position:sticky;top:0;z-index:5;background:var(--bar);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px}
+body::after{content:"BETA TEST";position:fixed;left:50%;top:52%;transform:translate(-50%,-50%) rotate(-32deg);font:700 min(22vw,150px)/1 var(--cond);letter-spacing:.06em;color:rgba(0,95,220,.06);white-space:nowrap;pointer-events:none;z-index:4}
+.beta{display:inline-block;font:700 11px/1 var(--sans);letter-spacing:.06em;background:#005FDC;color:#fff;border-radius:4px;padding:3px 6px;margin-left:8px;vertical-align:middle}
+@media(max-width:480px){header.top .sig{display:none}header.top h1{font-size:18px}}
+#lockBtn{flex:none;border:1px solid rgba(255,255,255,.35);background:none;color:#fff;font:600 13px var(--sans);border-radius:6px;padding:6px 10px;min-height:34px}
 header.top h1{font:600 20px/1.1 var(--cond);margin:0;letter-spacing:.2px;flex:1}
 header.top .sub{font-size:13px;color:#aab3bd;display:block;font-weight:400;font-family:var(--sans)}
 .sig{display:inline-flex;gap:3px;align-items:center}.sig i{display:block;height:5px;width:7px;background:var(--red);border-radius:1px}.sig i.l{width:22px}
@@ -33,7 +37,7 @@ main{max-width:860px;margin:0 auto;padding:14px 14px calc(96px + env(safe-area-i
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom)}
 nav.tabs button{border:0;background:none;color:var(--mut);font:500 13px var(--sans);padding:8px 2px 9px;min-height:58px;display:flex;flex-direction:column;align-items:center;gap:3px}
 nav.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
-nav.tabs button.on{color:var(--red)}
+nav.tabs button.on{color:var(--brand)}
 h2{font:600 24px/1.1 var(--cond);margin:6px 0 12px}
 h3{font:600 18px/1.2 var(--cond);margin:0 0 8px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
@@ -42,10 +46,10 @@ h3{font:600 18px/1.2 var(--cond);margin:0 0 8px}
 label.f{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
 input,select,textarea{font:16px var(--sans);color:var(--ink);background:light-dark(#fff,#12161a);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-height:44px}
 textarea{min-height:84px;resize:vertical;line-height:1.4}
-input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--red);outline-offset:1px}
-input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--red)}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--brand)}
 button.b{font:600 15px var(--sans);min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
-button.p{background:var(--red);border-color:var(--red);color:#fff}
+button.p{background:var(--brand);border-color:var(--brand);color:#fff}
 button.d{color:var(--red)}button.d[data-armed]{background:var(--red);color:#fff}
 button.s{min-height:38px;padding:4px 10px;font-size:14px}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{flex:1;border:0;background:var(--card);color:var(--ink);font:600 15px var(--sans);min-height:44px}.seg button.on{background:var(--bar);color:#fff}
@@ -57,28 +61,29 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 .team{border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0}
 .mem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:8px 0;border-top:1px dashed var(--line)}
 .mem .full{grid-column:1/-1}
-.assign{border-left:3px solid var(--red);padding:2px 0 2px 10px;margin:8px 0}
+.assign{border-left:3px solid var(--brand);padding:2px 0 2px 10px;margin:8px 0}
 .cnt{font-size:12px;color:var(--mut);text-align:right}.cnt.over{color:var(--red);font-weight:600}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .pvw{overflow:hidden;margin:0 0 12px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 18px rgba(0,0,0,.08)}
 .pvs{transform-origin:0 0;width:210mm}
+#view .pvw [data-seat]{cursor:pointer}#view .pvw [data-seat].sel .sbox{stroke:#1f6feb!important;stroke-width:7!important;fill:#fff3b0!important}#view .pvw [data-seat].tgt .sbox{stroke-dasharray:8 5}
 #print{position:absolute;left:-10000px;top:0;width:210mm}
 
 /* ---------- PAPER ---------- */
 .a4{--sans:Barlow,"Avenir Next Condensed","Roboto Condensed","Arial Narrow",sans-serif-condensed,Arial,sans-serif;width:210mm;background:#fff;color:#111;font:10pt/1.3 var(--sans);padding:12mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .a4.card{height:297mm;padding:21mm 12mm;display:flex;flex-direction:column}
-.a4 .ph{display:flex;justify-content:space-between;align-items:flex-end;gap:6mm;border-bottom:.9mm solid #111;padding-bottom:2.5mm}
-.a4 .ship{font:700 15pt/1.05 var(--cond);text-transform:uppercase}
+.a4 .ph{display:flex;justify-content:space-between;align-items:flex-end;gap:6mm;border-bottom:.9mm solid #005FDC;padding-bottom:2.5mm}
+.a4 .ship{font:700 15pt/1.05 var(--cond);text-transform:uppercase;color:#0B2545}
 .a4 .ids{font-size:9pt;color:#444;margin-top:1mm}
 .a4 .ttl{text-align:right}.a4 .ttl .k{font:700 11pt var(--cond);letter-spacing:.4px}.a4 .ttl .s2{font-size:9pt;color:#444}
-.a4 .rank{font:700 26pt/1 var(--cond);margin-top:1mm}
+.a4 .rank{font:700 26pt/1 var(--cond);margin-top:1mm;color:#0B2545}
 .a4 .alarm{border:.4mm solid var(--red);border-radius:1.5mm;padding:2mm 3mm;margin-top:3mm;display:grid;gap:1.6mm}
 .a4 .al h4{margin:0;font:700 12pt var(--cond);color:var(--red);text-transform:uppercase;letter-spacing:.3px}
 .a4 .al svg{display:block;width:100%;height:3.4mm;margin:.8mm 0}
 .a4 .al p{margin:0;font-size:10pt;color:#222}
 .a4 .cbody{flex:1;min-height:0;overflow:hidden;margin-top:2.5mm}
 .a4 .cols{display:grid;grid-template-columns:1fr 1fr;gap:5mm;height:100%}.a4 .col{overflow:hidden;min-height:0}
-.a4 .en{border-bottom:.25mm solid #bbb;padding:2.2mm 0;break-inside:avoid}
+.a4 .en{border-bottom:.25mm solid #c9d6e8;padding:2.2mm 0;break-inside:avoid}
 .a4 .enh{display:flex;justify-content:space-between;align-items:center;gap:2mm;font:700 13.5pt var(--cond);text-transform:uppercase}
 .a4 .enh .rt{font:600 9.5pt var(--sans);color:var(--red);text-transform:none;display:flex;align-items:center;gap:1.5mm}
 .a4 .enh .rt svg{width:16mm;height:2.6mm}
@@ -87,13 +92,13 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 .a4 .tm{font-size:10pt;color:#333;margin-top:.6mm}
 .a4 .du{font-weight:700;font-size:12pt;line-height:1.25;margin-top:.5mm}
 .a4 .cd{color:var(--red);font-weight:700}
-.a4 .kn{background:#eeeeee;border-radius:1mm;padding:1.5mm 2.2mm;margin-top:1.5mm;font-size:10.5pt;line-height:1.3;color:#111}
+.a4 .kn{background:#F3F7FD;border-radius:1mm;padding:1.5mm 2.2mm;margin-top:1.5mm;font-size:10.5pt;line-height:1.3;color:#111}
 .a4.f1 .en{padding:1.4mm 0}.a4.f1 .alarm{padding:1.5mm 2.5mm;gap:1mm}.a4.f1 .kn{padding:.9mm 1.6mm;margin-top:.9mm}
 .a4.f2 .kn{font-size:9.5pt}.a4.f2 .tm{font-size:9pt}.a4.f2 .du{font-size:10.5pt}.a4.f2 .enh{font-size:12pt}.a4.f2 .mb{font-size:8.5pt}.a4.f2 .al p{font-size:9pt}
 .a4.f3 .al p{font-size:8.5pt}.a4.f3 table.sg td{height:7.2mm}.a4.f3 .kn{line-height:1.2}.a4.f3 .enh{font-size:10.5pt}.a4.f3 .as li{margin:.4mm 0}.a4.f3 .ph{padding-bottom:1.5mm}.a4.f3 .rank{font-size:22pt}
 .a4.f4 .kn{font-size:9pt;padding:.6mm 1.4mm}.a4.f4 .du{font-size:9.5pt;line-height:1.22}.a4.f4 .tm{font-size:8pt}.a4.f4 table.sg td{height:6.6mm}.a4.f4 .en{padding:1mm 0}.a4.f4 .alarm{margin-top:2mm}
 .a4 .sigw{margin-top:2.5mm}
-.a4 .sigw .st{font-weight:700;font-size:11pt;margin-bottom:1.2mm}
+.a4 .sigw .st{color:#0B2545;font-weight:700;font-size:11pt;margin-bottom:1.2mm}
 .a4 table.sg{width:100%;border-collapse:collapse;table-layout:fixed}
 .a4 table.sg th{background:#111;color:#fff;font:600 9pt var(--sans);text-align:left;padding:1.2mm 2mm}
 .a4 table.sg td{border:.25mm solid #888;height:8.5mm}
@@ -107,18 +112,18 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 .a4 .sp{display:grid;grid-template-columns:80mm 1fr;gap:4mm;margin-top:3mm;align-items:start}
 .a4 .sp svg{width:100%;height:auto;display:block}
 .a4 table.st{width:100%;border-collapse:collapse;font-size:9.5pt}
-.a4 table.st th{background:#111;color:#fff;text-align:left;font:600 8.5pt var(--sans);padding:1mm 2mm}
-.a4 table.st td{border:.25mm solid #999;padding:.3mm 1.4mm;font-size:8.8pt;line-height:1.25}
+.a4 table.st th{background:#0B2545;color:#fff;text-align:left;font:600 8.5pt var(--sans);padding:1mm 2mm}
+.a4 table.st td{border:.25mm solid #c9d6e8;padding:.3mm 1.4mm;font-size:8.8pt;line-height:1.25}
 .a4 table.st td:first-child{width:12mm;text-align:center;font-weight:700;color:var(--red)}
 .a4 table.st tr.sp0 td{color:#888}
 /* liferaft square + muster badges */
 .a4 .seat.raft{border-color:#111}.a4 .seat.raft small{color:#111}.a4 .seat.raft b{font-size:19pt;margin:.6mm 0}.a4 .seat.raft i{font:600 7pt var(--sans);font-style:normal;color:#444}
-.a4 .mb{display:inline-block;background:#111;color:#fff;font:700 10pt/1.3 var(--cond);text-transform:uppercase;letter-spacing:.3px;padding:.2mm 1.6mm;border-radius:.8mm;margin-right:1.2mm;vertical-align:baseline}
-.a4 .mb::before{content:"MUSTER ";color:#ff8a80}
-.a4 .mbig{display:flex;align-items:center;gap:3mm;border:.6mm solid #111;margin-top:2.5mm}
-.a4 .mbig .l{background:#111;color:#fff;font:700 10pt/1.1 var(--cond);text-transform:uppercase;padding:2mm 3mm;align-self:stretch;display:flex;align-items:center}
-.a4 .mbig .v{font:700 14pt/1.15 var(--cond);text-transform:uppercase;padding:1.5mm 0}
-.a4 .tbh .tm2{background:#111;color:#fff;font:700 8.5pt var(--cond);text-transform:uppercase;padding:.3mm 2mm;border-radius:.8mm;white-space:nowrap}
+.a4 .mb{display:inline-block;background:#005FDC;color:#fff;font:700 10pt/1.3 var(--cond);text-transform:uppercase;letter-spacing:.3px;padding:.2mm 1.6mm;border-radius:.8mm;margin-right:1.2mm;vertical-align:baseline}
+.a4 .mb::before{content:"MUSTER ";color:#BFD7FF}
+.a4 .mbig{display:flex;align-items:center;gap:3mm;border:.6mm solid #005FDC;background:#F3F7FD;margin-top:2.5mm}
+.a4 .mbig .l{background:#005FDC;color:#fff;font:700 10pt/1.1 var(--cond);text-transform:uppercase;padding:2mm 3mm;align-self:stretch;display:flex;align-items:center}
+.a4 .mbig .v{color:#0B2545;font:700 14pt/1.15 var(--cond);text-transform:uppercase;padding:1.5mm 0}
+.a4 .tbh .tm2{background:#005FDC;color:#fff;font:700 8.5pt var(--cond);text-transform:uppercase;padding:.3mm 2mm;border-radius:.8mm;white-space:nowrap}
 .a4 .rf{display:grid;grid-template-columns:1fr 1fr;gap:5mm;margin-top:3mm}
 .a4 .rf .bx{border:.5mm solid #111}
 .a4 .rf h4{margin:0;background:#111;color:#fff;font:700 13pt "Barlow Condensed",var(--cond);text-transform:uppercase;padding:2mm 3mm}
@@ -127,7 +132,7 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 /* side colours: port red, starboard green */
 .a4 .seat.P{border-color:#d42a20}.a4 .seat.P b,.a4 .seat.P small,.a4 .seat.P i{color:#d42a20}
 .a4 .seat.S{border-color:#178a3a}.a4 .seat.S b,.a4 .seat.S small,.a4 .seat.S i{color:#178a3a}
-.a4 .seat.N{border-color:#111}.a4 .seat.N small{color:#111}
+.a4 .seat.N{border-color:#0B2545}.a4 .seat.N small{color:#111}
 .a4 .bicon{display:flex;flex-direction:column;align-items:center;flex:none;width:14mm}
 .a4 .bicon svg{width:11mm;height:17mm;display:block}
 .a4 .bicon small{font:700 7pt/1.1 var(--cond);text-transform:uppercase;text-align:center;margin-top:.5mm}
@@ -136,27 +141,33 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 .a4 .seat.LB{border-color:var(--c,#111);width:27mm}.a4 .seat.LB small{font-size:8pt}.a4 .seat.LB b,.a4 .seat.LB small{color:var(--c,#111)}.a4 .lbc{color:#E06A00}
 .a4 .grp{display:flex;align-items:flex-end;gap:2mm}.a4 .grp+.grp{border-left:.4mm solid #bbb;padding-left:5mm;margin-left:2mm}
 .a4 .bicon.lb small{color:#111}
+.a4 .sgl{display:grid;grid-template-columns:30% 1fr;gap:8mm;margin-top:9mm}.a4 .sgl span{display:block;border-bottom:.3mm solid #0B2545}.a4 .sgl small{display:block;font-size:8.5pt;color:#444;margin-top:1mm}
+/* beta watermark */
+.a4{position:relative}
+.a4.wm::before{content:"BETA TEST";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-32deg);font:700 82pt/1 var(--cond);letter-spacing:4mm;color:rgba(0,95,220,.07);white-space:nowrap;pointer-events:none;z-index:0}
+.a4.wm>*{position:relative;z-index:1}
+.a4 .byline{font:500 6.5pt var(--sans);color:#a3afbf;letter-spacing:.2px}
 /* bills */
 .a4.bill{min-height:297mm}
-.a4 .band{background:#111;color:#fff;font:700 15pt/1.1 var(--cond);text-transform:uppercase;letter-spacing:.5px;padding:2mm 3mm;margin-top:3mm;text-align:center}
+.a4 .band{background:#E6EFFC;color:#0B2545;border-top:.6mm solid #005FDC;border-bottom:.6mm solid #005FDC;font:700 15pt/1.1 var(--cond);text-transform:uppercase;letter-spacing:.5px;padding:2mm 3mm;margin-top:3mm;text-align:center}
 .a4 .meta{margin-top:2.5mm;font-size:9.5pt;display:grid;gap:.8mm}
 .a4 .meta b{text-transform:uppercase;font-family:var(--cond);font-size:10pt}
-.a4 .imm{border:.35mm solid #111;padding:2mm 3mm;margin-top:2.5mm;font-size:9.5pt}
+.a4 .imm{border:.35mm solid #0B2545;background:#F3F7FD;padding:2mm 3mm;margin-top:2.5mm;font-size:9.5pt}
 .a4 .tb{margin-top:3mm;break-inside:avoid}
-.a4 .tbh{background:#d9d9d9;font:700 11pt var(--cond);text-transform:uppercase;padding:1.3mm 2.5mm;display:flex;justify-content:space-between;gap:3mm}
+.a4 .tbh{background:#E6EFFC;color:#0B2545;font:700 11pt var(--cond);text-transform:uppercase;padding:1.3mm 2.5mm;display:flex;justify-content:space-between;gap:3mm}
 .a4 .tbh span{font:500 9pt var(--sans);text-transform:none}
-.a4 .tbt{font-size:9pt;padding:1.3mm 2.5mm;border-left:.25mm solid #999;border-right:.25mm solid #999;white-space:pre-line}
+.a4 .tbt{font-size:9pt;padding:1.3mm 2.5mm;border-left:.25mm solid #c9d6e8;border-right:.25mm solid #c9d6e8;white-space:pre-line}
 .a4 table.dt{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9.5pt}
-.a4 table.dt th{background:#111;color:#fff;text-align:left;font:600 8.5pt var(--sans);padding:1mm 2.5mm}
-.a4 table.dt td{border:.25mm solid #999;padding:1.1mm 2.5mm;vertical-align:top}
+.a4 table.dt th{background:#0B2545;color:#fff;text-align:left;font:600 8.5pt var(--sans);padding:1mm 2.5mm}
+.a4 table.dt td{border:.25mm solid #c9d6e8;padding:1.1mm 2.5mm;vertical-align:top}
 .a4 table.dt td:first-child{width:34%}
-.a4 .ld{font-weight:700}.a4 .alt{font-size:8.5pt;color:#444}.a4 .rs{font-size:8pt;color:#555;display:block}
-.a4 .ins{margin-top:3mm;border:.35mm solid #111;padding:2mm 3mm;font-size:9.5pt;white-space:pre-line;break-inside:avoid}
-.a4 .ins h5{margin:0 0 1mm;font:700 10.5pt var(--cond);text-transform:uppercase}
+.a4 .ld{font-weight:700;color:#0B2545}.a4 .alt{font-size:8.5pt;color:#444}.a4 .rs{font-size:8pt;color:#555;display:block}
+.a4 .ins{margin-top:3mm;border:.35mm solid #c9d6e8;border-top:.8mm solid #005FDC;padding:2mm 3mm;font-size:9.5pt;white-space:pre-line;break-inside:avoid}
+.a4 .ins h5{color:#0B2545;margin:0 0 1mm;font:700 10.5pt var(--cond);text-transform:uppercase}
 .a4 table.eq{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt;margin-top:1mm}
-.a4 table.eq th,.a4 table.eq td{border:.25mm solid #999;padding:1mm 2mm;text-align:left;vertical-align:top;white-space:pre-line}
-.a4 table.eq th{background:#d9d9d9}
-.a4 .foot{margin-top:3mm;font:600 9.5pt var(--sans);text-transform:uppercase;text-align:center;border-top:.6mm solid #111;padding-top:2mm}
+.a4 table.eq th,.a4 table.eq td{border:.25mm solid #c9d6e8;padding:1mm 2mm;text-align:left;vertical-align:top;white-space:pre-line}
+.a4 table.eq th{background:#E6EFFC;color:#0B2545}
+.a4 .foot{color:#0B2545;margin-top:3mm;font:600 9.5pt var(--sans);text-transform:uppercase;text-align:center;border-top:.6mm solid #005FDC;padding-top:2mm}
 .a4 .un{margin-top:2.5mm;font-size:9.5pt}
 
 @page{size:A4;margin:12mm}
@@ -165,14 +176,15 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
  body>*:not(#print){display:none!important}
  #print{position:static!important;left:auto!important;width:auto;display:block!important;visibility:visible!important}
  .a4{width:auto;padding:0;break-after:page;page-break-after:always}
- .a4.card{height:255mm}
+ .a4.card{height:255mm;padding:0}
  .a4.bill{min-height:0}
 }
 </style>
 </head>
 <body>
 <header class="top">
- <h1>Station bill generator<span class="sub" id="shipline"></span></h1>
+ <h1>Station bill generator<span class="beta">BETA</span><span class="sub" id="shipline"></span></h1>
+ <button id="lockBtn" hidden></button>
  <span id="saved">Saved</span>
  <span class="sig" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="l"></i></span>
 </header>
@@ -375,13 +387,15 @@ const FF_NOTES='First to board: the INJURED (seat 7). Then board in DESCENDING s
 const FF_LAUNCH='1. Remove lashing and electrical supply.\n2. Embarkation.\n3. Take seated position and secure seat belts.\n4. Secure hatches.\n5. Start engine.\n6. Ensure clear landing.\n7. Release boat.\n8. Steer away.';
 function applyFF(D){Object.assign(D.boat,{layout:'ff750',name:'Schat-Harding FF750 free-fall survival craft',capacity:32,spec:'Capacity 32 persons · LOA 8.97 m × beam 2.8 m × height 3.25 m · max free-fall height 23 m · 40 HP diesel, 6 knots',notes:FF_NOTES,launch:FF_LAUNCH});
  D.roster.forEach(r=>{r.seat=FF.seats[r.id]||'';if(r.id==='CO'&&r.raft==='P')r.raft='A'})}
-const DEFAULTS=SEED();applyProc(DEFAULTS);applySop(DEFAULTS);applyFF(DEFAULTS);
+const DEFAULTS=SEED();DEFAULTS.lock={h:'4d2d8cae85c65b149fe2a44f2eaa30983b0ee582c4504d93fd4bae5b9d00ca2c',f:'f54774faf'};DEFAULTS.pin023=1;DEFAULTS.contact='3rd Officer';applyProc(DEFAULTS);applySop(DEFAULTS);applyFF(DEFAULTS);
 {const x=DEFAULTS.scenarios.find(q=>/man overboard/i.test(q.name)),t=x&&x.teams.find(q=>/lookout/i.test(q.name)),P={CDT:'Lookout: forward',MM:'Lookout: forward',EF:'Lookout: aft',OSMC:'Lookout: aft',OS1:'Lookout: port bridge wing',OS2:'Lookout: stbd bridge wing'};if(t)t.members.forEach(m=>{if(P[m.r])m.mu=P[m.r]});DEFAULTS.mobLook=1}
 if(!S||!S.roster||!S.scenarios){S=clone(DEFAULTS);S.library=allDuties();}
 if(!S.proc0428){applyProc(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 if(S.boat&&!S.boat.layout){applyFF(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 if(!S.mobLook){S.mobLook=1;const x=S.scenarios.find(q=>/man overboard/i.test(q.name));const t=x&&x.teams.find(q=>/lookout/i.test(q.name));const P={CDT:'Lookout: forward',MM:'Lookout: forward',EF:'Lookout: aft',OSMC:'Lookout: aft',OS1:'Lookout: port bridge wing',OS2:'Lookout: stbd bridge wing'};if(t)t.members.forEach(m=>{if(P[m.r]&&!m.mu)m.mu=P[m.r]});try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+if(!S.pin023){S.pin023=1;S.lock={h:'4d2d8cae85c65b149fe2a44f2eaa30983b0ee582c4504d93fd4bae5b9d00ca2c',f:'f54774faf'};if(!S.contact)S.contact='3rd Officer';try{sessionStorage.removeItem('sb_unlock')}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 if(!S.sop0095){applySop(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function dutyUse(d){let n=0;S.scenarios.forEach(x=>x.teams.forEach(t=>t.members.forEach(m=>{if(m.d===d)n++})));return n}
 function allDuties(){const set=new Set(S.library||[]);S.scenarios.forEach(s=>s.teams.forEach(t=>t.members.forEach(m=>m.d&&set.add(m.d))));return [...set].sort()}
 if(!S.boat)S.boat=clone(DEFAULTS.boat);
 if(!S.rafts)S.rafts=clone(DEFAULTS.rafts);
@@ -446,15 +460,15 @@ function cardHTML(rid,g){
  if(g==='B'){const h=Math.ceil(list.length/2);body=`<div class="cols"><div class="col">${list.slice(0,h).map(s=>entryHTML(s,rid)).join('')}</div><div class="col">${list.slice(h).map(s=>entryHTML(s,rid)).join('')}</div></div>`}
  else body=list.map(s=>entryHTML(s,rid)).join('');
  const rows='<tr><td style="height:13mm"></td><td></td></tr>';
- return `<div class="a4 card" data-rank="${esc(rid)}" data-g="${g}">
+ return `<div class="a4 card${S.betaPrint===false?'':' wm'}" data-rank="${esc(rid)}" data-g="${g}">
  ${g==='A'?`<div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div><div class="k" style="font:700 12pt var(--cond);letter-spacing:.4px;margin-top:2mm">EMERGENCY DUTY CARD A</div><div class="ids">${esc(S.cardA||'Fire, abandon ship and rescue')}${r&&r.watch?' · Watchkeeper':''}</div><div class="rank">${esc(r?r.name:rid)}</div></div>
  <div class="phr"><div class="grp"><div class="bicon lb">${lbIcon(r&&r.seat)}<small>Lifeboat<br>faces aft</small></div><div class="seat LB" style="--c:${r&&r.seat?sideCol(r.seat):'#111'}"><small>Lifeboat seat</small><b>${r&&r.seat?esc(r.seat):'–'}</b><small>${r&&r.seat?sideTxt(r.seat):''}</small></div></div></div></div>`:`<div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div>
  <div class="phr"><div class="ttl"><div class="k">EMERGENCY DUTY CARD ${g}</div><div class="s2">${g==='A'?'Fire and abandon ship':'Other emergencies'}${r&&r.watch?' · Watchkeeper':''}</div><div class="rank">${esc(r?r.name:rid)}</div></div></div></div>`}
  ${alarmBlock(kinds)}
  <div class="cbody">${body||'<p>No scenarios in this card group.</p>'}</div>
  <div class="sigw"><div class="st">I have read and understood my emergency duties.</div>
- <table class="sg"><colgroup><col style="width:30%"><col></colgroup><tr><th>Sign-on date</th><th>Signature over printed rank and name</th></tr>${rows}</table></div>
- <div class="pf"><span>Rev ${esc(S.ship.rev)} · Approved by ${esc(S.ship.approved)}</span><span>Card ${g} of 2</span></div></div>`}
+ <div class="sgl"><div><span></span><small>Sign-on date</small></div><div><span></span><small>Signature over printed rank and name</small></div></div></div>
+ <div class="pf"><span>Rev ${esc(S.ship.rev)} · Approved by ${esc(S.ship.approved)}</span><span class="byline">by @Ali0th</span><span>Card ${g} of 2</span></div></div>`}
 function balance(el){const cs=el.querySelectorAll('.col');if(cs.length<2)return;const[c1,c2]=cs;while(c2.firstElementChild)c1.appendChild(c2.firstElementChild);
  const en=[...c1.children],hs=en.map(e=>e.offsetHeight),tot=hs.reduce((a,b)=>a+b,0);let best=0,bv=1e9,acc=0;for(let k=0;k<=en.length;k++){const v=Math.max(acc,tot-acc);if(v<bv){bv=v;best=k}acc+=hs[k]||0}en.slice(best).forEach(e=>c2.appendChild(e))}
 function fitCard(el){
@@ -480,7 +494,7 @@ function billHTML(s){
  const un=S.roster.filter(r=>!assigned.has(r.id));
  const fs=S.locations.filter(l=>/^fire station/i.test(l));
  const eq=S.equipment;
- return `<div class="a4 bill">
+ return `<div class="a4 bill${S.betaPrint===false?'':' wm'}">
  <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">STATION BILL · MUSTER LIST</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
  <div class="band">${esc(s.title||s.name)}</div>
  ${alarmBlock(kinds,s.alarmText)}
@@ -492,10 +506,10 @@ function billHTML(s){
  <div class="un"><b>ALL OTHER CREW:</b> ${un.length?un.map(r=>esc(r.name)).join(', ')+' — ':''}${esc(s.unassigned||DISP)}</div>
  ${s.instructions?`<div class="ins"><h5>Instructions</h5>${esc(s.instructions)}</div>`:''}
  ${s.equipment?`<div class="ins"><h5>Location of equipment</h5><table class="eq"><tr>${eq.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${eq.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>`:''}
- <div class="foot">${esc(s.footer||GEN_FOOT)}</div></div>`}
+ <div class="foot">${esc(s.footer||GEN_FOOT)}</div><div class="byline" style="text-align:right;margin-top:1mm">by @Ali0th</div></div>`}
 function generalHTML(){
  const fs=S.locations.filter(l=>/^fire station/i.test(l));
- return `<div class="a4 bill">
+ return `<div class="a4 bill${S.betaPrint===false?'':' wm'}">
  <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">SOLAS CH. III REG. 8 AND 37</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
  <div class="band">General emergency instructions</div>
  ${alarmBlock(['general','fire','mob'])}
@@ -503,7 +517,7 @@ function generalHTML(){
  <div class="ins"><h5>Fire stations</h5>${fs.map(esc).join('\n')}</div>
  <div class="tb"><table class="dt"><tr><th>Emergency</th><th>Alarm · muster / assembly</th></tr>${S.scenarios.map(s=>`<tr><td class="ld">${esc(s.name)}</td><td>${s.alarm==='fire'?'Fire alarm':'General alarm'}${s.mobAlarm?' (+ 3 long)':''} · ${esc(s.muster)}</td></tr>`).join('')}</table></div>
  <div class="ins"><h5>Location of equipment</h5><table class="eq"><tr>${S.equipment.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${S.equipment.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>
- <div class="foot">Approved by ${esc(S.ship.approved)} · Duty cards in each cabin show individual duties by rank</div></div>`}
+ <div class="foot">Approved by ${esc(S.ship.approved)} · Duty cards in each cabin show individual duties by rank</div><div class="byline" style="text-align:right;margin-top:1mm">by @Ali0th</div></div>`}
 
 /* ================= LIFEBOAT SEAT PLAN ================= */
 const seatOf=n=>S.roster.find(r=>+r.seat===n);
@@ -514,11 +528,12 @@ function ffSvg(){
  <rect x="262" y="235" width="76" height="150" rx="4" fill="#dbe6f4" stroke="#111" stroke-width="1.5"/><text transform="translate(305 310) rotate(-90)" text-anchor="middle" font-size="15" font-weight="700" fill="#244a7a">WATER</text>
  <rect x="262" y="392" width="76" height="92" rx="4" fill="#e6e6e6" stroke="#111" stroke-width="1.5"/><text transform="translate(305 438) rotate(-90)" text-anchor="middle" font-size="13" font-weight="700" fill="#333">PROVISION</text>`;
  for(const k in FF.pos){const n=+k,[x,y]=FF.pos[k],w=n===FF.helm?168:W,col=sideCol(n),r=seatOf(n),inj=n===FF.injured&&!r;
-  if(inj){g+=`<rect x="${x}" y="${y}" width="${w}" height="${H}" rx="8" fill="${RED}" stroke="#111" stroke-width="1.5"/><text x="${x+w/2}" y="${y+24}" text-anchor="middle" font-size="19" font-weight="700" fill="#fff">+ ${n}</text><text x="${x+w/2}" y="${y+48}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">INJURED</text>`;continue}
+  g+=`<g data-seat="${n}">`;
+  if(inj){g+=`<rect class="sbox" x="${x}" y="${y}" width="${w}" height="${H}" rx="8" fill="${RED}" stroke="#111" stroke-width="1.5"/><text x="${x+w/2}" y="${y+24}" text-anchor="middle" font-size="19" font-weight="700" fill="#fff">+ ${n}</text><text x="${x+w/2}" y="${y+48}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">INJURED</text></g>`;continue}
   const lines=r?wrapName((String(r.name).match(/\(([^)]+)\)/)||[])[1]||r.name,w>100?18:10):wrapName(spareLbl(n),10);
-  g+=`<rect x="${x}" y="${y}" width="${w}" height="${H}" rx="8" fill="#fff" stroke="${col}" stroke-width="3.2"/><text x="${x+7}" y="${y+22}" font-size="18" font-weight="700" fill="${col}">${n}</text>${n===FF.helm?`<text x="${x+w-8}" y="${y+20}" text-anchor="end" font-size="12" font-weight="700" fill="#111">HELM</text>`:''}
-  ${lines.map((l,i)=>`<text x="${x+w/2+(w>100?0:6)}" y="${y+(lines.length>1?38:44)+i*15}" text-anchor="middle" font-size="${w>100?16:13}" font-weight="${r?700:400}" fill="${r?'#111':'#888'}">${esc(l)}</text>`).join('')}`}
- g+=`<rect x="250" y="944" width="100" height="34" rx="4" fill="#111"/><text x="300" y="966" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">ENTRANCE</text>
+  g+=`<rect class="sbox" x="${x}" y="${y}" width="${w}" height="${H}" rx="8" fill="#fff" stroke="${col}" stroke-width="3.2"/><text x="${x+7}" y="${y+22}" font-size="18" font-weight="700" fill="${col}">${n}</text>${n===FF.helm?`<text x="${x+w-8}" y="${y+20}" text-anchor="end" font-size="12" font-weight="700" fill="#111">HELM</text>`:''}
+  ${lines.map((l,i)=>`<text x="${x+w/2+(w>100?0:6)}" y="${y+(lines.length>1?38:44)+i*15}" text-anchor="middle" font-size="${w>100?16:13}" font-weight="${r?700:400}" fill="${r?'#111':'#888'}">${esc(l)}</text>`).join('')}</g>`}
+ g+=`<rect x="250" y="944" width="100" height="34" rx="4" fill="#0B2545"/><text x="300" y="966" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">ENTRANCE</text>
  <path d="M300 1078 V984" stroke="#111" stroke-width="7"/><path d="M286 990 L300 972 L314 990Z" fill="#111"/>
  <path d="M246 961 H112" stroke="${GREEN}" stroke-width="5"/><path d="M114 951 L96 961 L114 971Z" fill="${GREEN}"/><text x="170" y="952" text-anchor="middle" font-size="12" font-weight="700" fill="${GREEN}">LEFT</text>
  <path d="M354 961 H488" stroke="${RED}" stroke-width="5"/><path d="M486 951 L504 961 L486 971Z" fill="${RED}"/><text x="430" y="952" text-anchor="middle" font-size="12" font-weight="700" fill="${RED}">RIGHT</text>
@@ -533,9 +548,9 @@ function boatSvg(){if(isFF())return ffSvg();
  let g=`<path d="M300 18 C455 55 560 135 572 ${top} L572 ${H-70} Q572 ${H-22} 524 ${H-22} L76 ${H-22} Q28 ${H-22} 28 ${H-70} L28 ${top} C40 135 145 55 300 18Z" fill="#f1f1f1" stroke="#111" stroke-width="4"/>`;
  g+=`<text x="300" y="80" text-anchor="middle" font-size="20" font-weight="700" fill="#111">BOW</text><text x="300" y="58" text-anchor="middle" font-size="12" fill="#444">(points aft of the ship)</text><text x="64" y="${top-30}" font-size="15" font-weight="700" fill="${OR}">← LEFT as you board</text><text x="64" y="${top-12}" font-size="12" font-weight="600" fill="${GREEN}">Ship's stbd side · stbd liferaft</text><text x="536" y="${top-30}" text-anchor="end" font-size="15" font-weight="700" fill="${OR}">RIGHT as you board →</text><text x="536" y="${top-12}" text-anchor="end" font-size="12" font-weight="600" fill="${RED}">Ship's port side · port liferaft</text><path d="M300 92 l-10 18 h20z" fill="#111" transform="rotate(180 300 101)"/>`;
  const seat=(x,y,w,n,cox)=>{const r=seatOf(n);const lines=r?wrapName((String(r.name).match(/\(([^)]+)\)/)||[])[1]||r.name,w>130?20:w>95?11:8):['Spare'];const cx=x+30+(w-34)/2;
-  return `<rect x="${x}" y="${y}" width="${w}" height="${sh}" rx="6" fill="#fff" stroke="${cox?'#d42a20':'#111'}" stroke-width="${cox?3:1.6}"/><rect x="${x+3}" y="${y+3}" width="${w-6}" height="7" rx="2" fill="#111"/>
+  return `<g data-seat="${n}"><rect class="sbox" x="${x}" y="${y}" width="${w}" height="${sh}" rx="6" fill="#fff" stroke="${cox?'#d42a20':'#111'}" stroke-width="${cox?3:1.6}"/><rect x="${x+3}" y="${y+3}" width="${w-6}" height="7" rx="2" fill="#111"/>
   <text x="${x+7}" y="${y+33}" font-size="19" font-weight="700" fill="${cox?'#111':sideCol(n)}">${n}</text>
-  ${lines.map((l,i)=>`<text x="${cx}" y="${y+(lines.length>1?36:44)+i*16}" text-anchor="middle" font-size="${w>95?13:11}" font-weight="${r?600:400}" fill="${r?'#111':'#999'}">${esc(l)}</text>`).join('')}`};
+  ${lines.map((l,i)=>`<text x="${cx}" y="${y+(lines.length>1?36:44)+i*16}" text-anchor="middle" font-size="${w>95?13:11}" font-weight="${r?600:400}" fill="${r?'#111':'#999'}">${esc(l)}</text>`).join('')}</g>`};
  let n=2;for(let row=0;row<rows;row++)for(let i=0;i<per&&n<=cap;i++,n++)g+=seat(sx(i),top+row*rh,sw,n);
  g+=seat(300-85,cy+18,170,1,1)+`<text x="300" y="${cy+12}" text-anchor="middle" font-size="14" font-weight="700" fill="#d42a20">COXSWAIN</text>`;
  g+=`<rect x="215" y="${H-64}" width="170" height="34" rx="4" fill="${OR}" stroke="#111" stroke-width="2"/><text x="300" y="${H-41}" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">LIFEBOAT ENTRANCE</text>
@@ -549,25 +564,25 @@ function seatPlanHTML(){
  for(let n=1;n<=cap;n++){const r=seatOf(n);const er=r?effRaft(r):'';const sd=seatSide(n);
   rows+=`<tr class="${r?'':'sp0'}"><td style="color:${sideCol(n)}">${n}</td><td>${r?esc((String(r.name).match(/\(([^)]+)\)/)||[])[1]||r.name):(isFF()&&n===FF.injured?'<b style="color:#d42a20">Injured (first to board)</b>':esc(spareLbl(n)))}</td><td style="font-size:8.5pt;color:${sideCol(n)};font-weight:700">${n===hs?'Helm':sd==='L'?'Left':sd==='R'?'Right':''}</td></tr>`}
  const none=S.roster.filter(r=>!r.seat||+r.seat>cap);
- return `<div class="a4 bill">
+ return `<div class="a4 bill${S.betaPrint===false?'':' wm'}">
  <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">LIFEBOAT SEAT ALLOCATION</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
  <div class="band" style="font-size:13pt">${esc(S.boat.name)} · ${cap} persons</div>
  ${S.boat.spec?`<div class="ids" style="text-align:center;margin-top:1mm">${esc(S.boat.spec)}</div>`:''}
  <div class="sp"><div>${boatSvg()}<div class="ids" style="text-align:center">Bow at top, entrance at the bottom, as you board. The boat faces aft: green seats are on the ship's starboard side, red seats on the ship's port side.</div></div>
  <div><table class="st"><colgroup><col style="width:9mm"><col><col style="width:14mm"></colgroup><tr><th>Seat</th><th>Rank</th><th>Side</th></tr>${rows}</table>${none.length?`<p class="ids"><b>No seat:</b> ${none.map(r=>esc(r.name)).join(', ')}</p>`:''}</div></div>
  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm">${S.boat.notes?`<div class="ins"><h5>Boarding</h5>${esc(S.boat.notes)}</div>`:''}${S.boat.launch?`<div class="ins"><h5>Launching procedure</h5>${esc(S.boat.launch)}</div>`:''}</div>
- <div class="foot">Each crew member's seat number is shown on Emergency Duty Card A</div></div>`}
+ <div class="foot">Each crew member's seat number is shown on Emergency Duty Card A</div><div class="byline" style="text-align:right;margin-top:1mm">by @Ali0th</div></div>`}
 function raftPageHTML(){
  const col=v=>{const L=S.roster.filter(r=>effRaft(r)===v);return `<div class="bx ${v}"><h4>${v==='P'?'Port':'Starboard'} liferaft</h4><div class="loc">${esc(raftLoc(v))} · ${L.length} crew</div><ol>${L.map(r=>`<li>${esc(r.name)}${r.seat?` <span style="color:#666;font-size:9pt">· lifeboat seat ${esc(r.seat)}</span>`:''}</li>`).join('')||'<li>None</li>'}</ol></div>`};
  const none=S.roster.filter(r=>!effRaft(r));
- return `<div class="a4 bill">
+ return `<div class="a4 bill${S.betaPrint===false?'':' wm'}">
  <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">LIFERAFT ALLOCATION</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
  <div class="band">Liferaft allocation</div>
  ${alarmBlock(['general'],BOAT_AL)}
  <div class="rf">${col('P')}${col('S')}</div>
  ${none.length?`<p class="ids"><b>No liferaft:</b> ${none.map(r=>esc(r.name)).join(', ')}</p>`:''}
  ${S.rafts.notes?`<div class="ins"><h5>Notes</h5>${esc(S.rafts.notes)}</div>`:''}
- <div class="foot">Each crew member's liferaft side is shown on Emergency Duty Card A</div></div>`}
+ <div class="foot">Each crew member's liferaft side is shown on Emergency Duty Card A</div><div class="byline" style="text-align:right;margin-top:1mm">by @Ali0th</div></div>`}
 function raftEditor(){
  return `<div class="panel"><h3>Liferaft locations</h3><label class="f">Port liferaft</label><input data-set="rafts" data-f="port" value="${esc(S.rafts.port)}"><label class="f">Starboard liferaft</label><input data-set="rafts" data-f="stbd" value="${esc(S.rafts.stbd)}"><label class="f">Notes</label><textarea data-set="rafts" data-f="notes">${esc(S.rafts.notes)}</textarea></div>
  <div class="panel"><h3>Crew allocation</h3><p class="hint">Auto: left side of the lifeboat goes to the starboard liferaft, right side to the port liferaft (the boat faces aft). The coxswain needs a manual choice.</p><p class="hint">Port ${S.roster.filter(r=>effRaft(r)==='P').length} · Starboard ${S.roster.filter(r=>effRaft(r)==='S').length}</p>
@@ -595,11 +610,37 @@ async function doPrint(pages,label){
   try{await DL.save({filename:fname((label||'print')+' '+S.ship.name)+'.html',data:html});note('Print file saved. Open it in Safari or Chrome; the print screen opens by itself. Choose Print or Save as PDF.')}catch(e){note('The file was not saved. Tap the button again to retry.')}
   return}
  if(framed){P.innerHTML='';note('Printing is not available inside this viewer. Open the app file in Safari or Chrome to print.');return}
+ document.title=(label||'Print')+' – '+S.ship.name;clearTimeout(window._tt);window._tt=setTimeout(()=>{document.title='Station Bill Generator'},90000);
  setTimeout(()=>{try{window.print()}catch(e){}},80)}
 /* iOS fires afterprint as soon as the print sheet opens, so the print pages are kept until the next print */
 const allCards=()=>S.roster.flatMap(r=>[cardHTML(r.id,'A'),cardHTML(r.id,'B')]);
 const allBills=()=>[generalHTML(),seatPlanHTML(),...S.scenarios.map(billHTML)];
 const fitWarn='<div class="warn fitw" hidden>This card is too long for one A4 page. Shorten the longest key notes or duties in Drills.</div>';
+
+/* ================= EDIT LOCK ================= */
+let UNLOCKED=false;try{UNLOCKED=sessionStorage.getItem('sb_unlock')==='1'}catch(e){}
+const hasPin=()=>!!(S.lock&&(S.lock.h||S.lock.f));
+const contact=()=>S.contact||'3rd Officer';
+const askMsg=()=>'View and print only. To add, delete or move anything, enter the PIN or ask the '+contact()+' for permission.';
+const isLocked=()=>hasPin()&&!UNLOCKED;
+const normPin=p=>String(p||'').trim().toUpperCase();
+function fnvPin(pin){const t='stationbill:'+normPin(pin);let h=2166136261;for(const c of t){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return 'f'+(h>>>0).toString(16)}
+async function shaPin(pin){const t='stationbill:'+normPin(pin);try{const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch(e){return ''}}
+async function pinOk(pin){if(!S.lock)return false;if(S.lock.f&&fnvPin(pin)===S.lock.f)return true;const h=await shaPin(pin);return !!h&&h===S.lock.h}
+async function makeLock(pin){return {h:await shaPin(pin),f:fnvPin(pin)}}
+function setUnlocked(v){UNLOCKED=v;try{v?sessionStorage.setItem('sb_unlock','1'):sessionStorage.removeItem('sb_unlock')}catch(e){}}
+function vLock(){return `<h2>View and print only</h2><div class="panel"><p>Viewing and printing cards and station bills are open to everyone. Adding, deleting, editing or moving anything needs the PIN.</p><p style="font-weight:600">No PIN? Ask the ${esc(contact())} for permission.</p>
+ <label class="f" for="pinIn">PIN</label><input id="pinIn" type="password" autocapitalize="characters" autocorrect="off" spellcheck="false" autocomplete="current-password" placeholder="Enter PIN">
+ <div id="pinMsg" class="hint" style="color:var(--red);min-height:1.2em"></div>
+ <div class="actions"><button class="b p" data-act="unlock">Unlock</button></div></div>
+ <div class="panel"><h3>Reset this device</h3><p class="hint">Erases this device's saved changes and returns to the ship defaults. The default PIN still applies afterwards.</p><div class="actions"><button class="b d" data-act="eraseAll">Erase this device's data</button></div></div>`}
+function lockPanel(){
+ return `<div class="panel"><h3>Edit lock</h3><p class="hint">This app opens as view and print only on every device. You're unlocked until you close the app or tap Lock now.</p>
+  <label class="f">Who to ask for permission</label><input data-set="root" data-f="contact" value="${esc(contact())}">
+  <div class="actions"><button class="b p" data-act="lockNow">Lock now</button></div>
+  <label class="f">Change PIN (letters, digits and symbols allowed; not case-sensitive)</label>
+  <div class="row"><input id="pin1" type="password" autocapitalize="characters" autocorrect="off" placeholder="New PIN" autocomplete="new-password"><input id="pin2" type="password" autocapitalize="characters" autocorrect="off" placeholder="Repeat new PIN" autocomplete="new-password"></div>
+  <div id="pinSetMsg" class="hint" style="min-height:1.2em"></div><div class="actions"><button class="b" data-act="setPin">Change PIN</button></div></div>`}
 
 /* ================= VIEWS ================= */
 const opt=(v,l,sel)=>`<option value="${esc(v)}"${v===sel?' selected':''}>${esc(l)}</option>`;
@@ -611,7 +652,7 @@ function vCards(){
  return `<h2>Cabin duty cards</h2>
  <div class="panel"><label class="f" for="rk">Rank</label><select id="rk" data-act="pickRank">${rankOpts(r)}</select>
  <div style="margin-top:10px" class="seg">${['A','B','both'].map(k=>`<button data-act="card" data-v="${k}" class="${V.card===k?'on':''}">${k==='both'?'Both':'Card '+k}</button>`).join('')}</div>
- <div class="actions"><button class="b p" data-act="printCard">${framed?"Save print file":"Print this rank"}</button><button class="b" data-act="printAllCards">Print all ranks (${S.roster.length*2} pages)</button><button class="b" data-act="editRank" data-r="${esc(r)}">Edit duties</button></div>
+ <div class="actions"><button class="b p" data-act="printCard">${framed?"Save print file":"Print this rank"}</button><button class="b" data-act="printAllCards">Print all ranks (${S.roster.length*2} pages)</button>${isLocked()?`<button class="b" data-act="askPerm">Request change</button>`:`<button class="b" data-act="editRank" data-r="${esc(r)}">Edit duties</button>`}</div>
  <p class="hint">Card A: ${esc(S.cardA)}. Card B: other emergencies. Rank only, no names. Crew sign by hand.</p></div>
  ${pages.map(p=>fitWarn+pv(p)).join('')}`}
 function vBills(){
@@ -621,7 +662,18 @@ function vBills(){
  <div class="panel"><label class="f" for="bl">Scenario</label><select id="bl" data-act="pickBill">${opt('general','General emergency instructions (all crew)',V.bill)}${opt('seats','Lifeboat seat allocation',V.bill)}${S.scenarios.map(s=>opt(s.id,s.name,V.bill)).join('')}</select>
  <div class="actions"><button class="b p" data-act="printBill">${framed?"Save print file":"Print this list"}</button><button class="b" data-act="printAllBills">Print all lists</button><button class="b" data-act="printEverything">Print everything</button></div>
  <p class="hint">Built live from the crew roster. Ranks without a role appear under "All other crew".</p></div>
- ${pv(page)}${V.bill==='seats'?seatEditor():''}`}
+ ${V.bill==='seats'?(isLocked()?`<div class="panel"><span class="hint">${esc(askMsg())}</span></div>`:seatPanel()):''}${pv(page)}${V.bill==='seats'&&!isLocked()?seatEditor():''}`}
+function seatPanel(){
+ const n=V.selSeat,r=n?seatOf(n):null;
+ if(!n)return `<div class="panel" style="border-color:#1f6feb"><b>Move crew on the plan:</b> tap a seat to select it, then tap another seat to move or swap. <span class="hint">Tap the selected seat again to cancel.</span></div>`;
+ return `<div class="panel" style="border:2px solid #1f6feb"><div class="row"><b style="flex:1 1 100%">Seat ${n} selected: ${r?esc(r.name):esc(spareLbl(n))}</b><span class="hint" style="flex:1 1 100%">Tap another seat to ${r?'move '+esc(r.name)+' there (swaps if taken)':'move its crew here'}, or choose a rank:</span>
+ <select data-act="seat" data-n="${n}" aria-label="Rank for seat ${n}">${rankOpts(r?r.id:'',spareLbl(n))}</select><button class="b s" data-act="seatClear" style="flex:0 0 auto">Empty seat</button><button class="b s" data-act="seatDone" style="flex:0 0 auto">Done</button></div></div>`}
+function seatTap(n){
+ if(!V.selSeat){V.selSeat=n;return render(true)}
+ if(V.selSeat===n){V.selSeat=null;return render(true)}
+ const a=seatOf(V.selSeat),b=seatOf(n),from=V.selSeat;
+ if(a)a.seat=n;if(b)b.seat=from;
+ V.selSeat=null;save();render(true)}
 function seatEditor(){
  const ff=isFF(),cap=ff?32:Math.max(2,+S.boat.capacity||26);let list='';
  for(let n=1;n<=cap;n++){const r=seatOf(n);list+=`<div class="row" style="margin:6px 0"><span class="badge" style="flex:0 0 52px;text-align:center;font-size:15px;color:${sideCol(n)};border:2px solid ${sideCol(n)}">${n}</span><select data-act="seat" data-n="${n}" aria-label="Seat ${n}">${rankOpts(r?r.id:'',spareLbl(n)+(ff&&n===FF.injured?' (reserved)':''))}</select></div>`}
@@ -700,6 +752,8 @@ function vSet(){
  const sh=(f,l)=>`<div><label class="f">${l}</label><input data-set="ship" data-f="${f}" value="${esc(S.ship[f])}"></div>`;
  const q=(V.libQ||'').toLowerCase();const lib=allDuties().filter(d=>!q||d.toLowerCase().includes(q));
  return `<h2>Settings</h2>
+ ${lockPanel()}
+ <div class="panel"><label class="row" style="gap:8px"><input type="checkbox" data-set="root" data-f="betaPrint"${S.betaPrint===false?'':' checked'} style="flex:0 0 auto"><span>Show BETA TEST watermark on printouts</span></label></div>
  <div class="panel"><h3>Ship</h3><div class="row">${sh('name','Ship name')}${sh('call','Call sign')}</div><div class="row">${sh('port','Port of registry')}${sh('imo','IMO number')}</div><div class="row">${sh('rev','Revision no.')}${sh('approved','Approved by (rank)')}</div></div>
  <div class="panel"><h3>Liferafts</h3><p class="hint">No fixed liferaft allocation. These locations print on the liferaft station bill.</p><label class="f">Port liferaft</label><input data-set="rafts" data-f="port" value="${esc(S.rafts.port)}"><label class="f">Starboard liferaft</label><input data-set="rafts" data-f="stbd" value="${esc(S.rafts.stbd)}"></div>
  <div class="panel"><h3>Duty cards</h3><label class="f">Card A subtitle</label><input data-set="root" data-f="cardA" value="${esc(S.cardA)}"><p class="hint">Choose which drills go on Card A or B in Drills → Edit → Card group.</p></div>
@@ -715,10 +769,10 @@ function vSet(){
  <div class="row">${S.equipment.head.map((h,i)=>`<input data-act="eqHead" data-i="${i}" value="${esc(h)}" style="font-weight:600" aria-label="Column ${i+1}">`).join('')}</div>
  ${S.equipment.rows.map((r,ri)=>`<div class="row" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)">${r.map((c,ci)=>`<input data-act="eqCell" data-i="${ri}" data-c="${ci}" value="${esc(c)}" aria-label="${esc(S.equipment.head[ci])}">`).join('')}<button class="b s d" data-act="delEq" data-i="${ri}" style="flex:0 0 auto">Delete row</button></div>`).join('')}
  <div class="actions"><button class="b s" data-act="addEq">+ Add row</button></div></div>
- <div class="panel"><h3>Duty library (${allDuties().length})</h3><p class="hint">These fill the duty dropdowns. Editing here changes the list, not duties already assigned.</p>
+ <div class="panel"><h3>Duty library (${allDuties().length})</h3><p class="hint">These fill the duty dropdowns. Edit a duty and tap outside the box: every rank with that duty, in every drill, updates too.</p>
  <input id="libQ" data-act="libQ" placeholder="Search duties" value="${esc(V.libQ||'')}">
  <div class="row" style="margin-top:8px"><input id="newLib" placeholder="Type a new duty"><button class="b s" data-act="addLib" style="flex:0 0 auto">Add</button></div>
- <div class="list" style="margin-top:8px">${lib.slice(0,60).map(d=>`<div class="li"><span class="grow" style="font-size:15px">${esc(d)}</span><button class="b s d" data-act="delLib" data-v="${esc(d)}">Delete</button></div>`).join('')}</div>${lib.length>60?`<p class="hint">Showing 60 of ${lib.length}. Search to narrow.</p>`:''}</div>
+ <div class="list" style="margin-top:8px">${lib.slice(0,60).map(d=>{const u=dutyUse(d);return `<div class="li" style="flex-wrap:wrap"><textarea data-act="libEdit" data-v="${esc(d)}" rows="2" style="flex:1 1 100%;min-height:58px" aria-label="Duty">${esc(d)}</textarea><span class="tag" style="flex:1">${u?'Assigned '+u+'× · edits update all of them':'Not assigned'}</span><button class="b s d" data-act="delLib" data-v="${esc(d)}">Delete</button></div>`}).join('')}</div>${lib.length>60?`<p class="hint">Showing 60 of ${lib.length}. Search to narrow.</p>`:''}</div>
  <div class="panel"><h3>Backup and transfer</h3><p class="hint">Data is saved on this device only. Export a backup before clearing the browser or moving to another phone.</p>
  <div class="actions"><button class="b p" data-act="export">Download backup (.json)</button><button class="b" data-act="copyExport">Copy backup text</button></div>
  <label class="f" for="impF">Import from file</label><input type="file" id="impF" accept=".json,application/json">
@@ -732,9 +786,14 @@ function render(keepScroll){
  const y=scrollY;
  document.getElementById('shipline').textContent=[S.ship.name,S.ship.call].filter(Boolean).join(' · ');
  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.tab));
- view.innerHTML={cards:vCards,bills:vBills,ranks:vRanks,scen:vScen,set:vSet}[V.tab]();
+ const gate=isLocked()&&['ranks','scen','set'].includes(V.tab);
+ view.innerHTML=gate?vLock():{cards:vCards,bills:vBills,ranks:vRanks,scen:vScen,set:vSet}[V.tab]();
+ const lb=document.getElementById('lockBtn');lb.hidden=!hasPin();lb.textContent=isLocked()?'View only':'Lock';
  requestAnimationFrame(layoutPreviews);
+ if(V.tab==='bills'&&V.bill==='seats'&&V.selSeat){const g=view.querySelector(`.pvw [data-seat="${V.selSeat}"]`);if(g)g.classList.add('sel')}
  if(keepScroll)scrollTo(0,y);else scrollTo(0,0)}
+document.getElementById('lockBtn').addEventListener('click',()=>{if(isLocked()){V.tab='set';render()}else{setUnlocked(false);V.tab='cards';render()}});
+view.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='pinIn'){const u=view.querySelector('[data-act=unlock]');if(u)u.click()}});
 document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;V.tab=b.dataset.tab;V.rankEdit=null;V.scEdit=null;render()});
 
 /* ================= EDIT HANDLERS ================= */
@@ -744,6 +803,7 @@ function objOf(ds){
  const s=sc(ds.s);if(!s)return null;if(ds.t==null)return s;
  const t=s.teams[+ds.t];if(!t)return null;if(ds.m==null)return t;return t.members[+ds.m]}
 function commit(el){
+ if(isLocked())return false;
  const ds=el.dataset;if(!ds.f)return false;const o=objOf(ds);if(!o)return false;
  o[ds.f]=el.type==='checkbox'?el.checked:el.value;
  if(ds.f==='d'&&el.value.trim()&&!S.library.includes(el.value))S.library.push(el.value);
@@ -752,24 +812,29 @@ view.addEventListener('input',e=>{
  const el=e.target,ds=el.dataset;
  if(ds.act==='libQ'){V.libQ=el.value;clearTimeout(window._lq);window._lq=setTimeout(()=>{render(true);const q=document.getElementById('libQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},300);return}
  if(ds.act==='locEdit'){const old=S.locations[+ds.i];S.locations[+ds.i]=el.value;S.scenarios.forEach(s=>{if(s.muster===old)s.muster=el.value;s.teams.forEach(t=>{if(t.muster===old)t.muster=el.value})});save();return}
+ if(ds.act==='libEdit')return;
  if(ds.act==='eqHead'){S.equipment.head[+ds.i]=el.value;save();return}
  if(ds.act==='eqCell'){S.equipment.rows[+ds.i][+ds.c]=el.value;save();return}
  if(el.tagName!=='SELECT'&&el.type!=='checkbox'){commit(el);if(ds.cnt){const c=document.getElementById('cnt'),s=sc(ds.s),lim=s.group==='A'?320:180;c.textContent=`${el.value.length} / ${lim} suggested`;c.classList.toggle('over',el.value.length>lim)}}});
 view.addEventListener('change',e=>{
  const el=e.target,ds=el.dataset;
  if(el.id==='impF'){const f=el.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>importJSON(rd.result);rd.readAsText(f);return}
- if(ds.act==='seat'){if(el.value)assignSeat(el.value,+ds.n);else{const o=seatOf(+ds.n);if(o)o.seat=''}save();return render(true)}
+ if(ds.act==='seat'){if(el.value)assignSeat(el.value,+ds.n);else{const o=seatOf(+ds.n);if(o)o.seat=''}V.selSeat=null;save();return render(true)}
  if(ds.act==='rankSeat'){assignSeat(ds.r,el.value?+el.value:'');save();return render(true)}
  if(ds.re){commit(el);return render(true)}
+ if(ds.act==='libEdit'){const old=ds.v,nv=el.value.trim();if(!nv||nv===old)return;S.scenarios.forEach(x=>x.teams.forEach(t=>t.members.forEach(m=>{if(m.d===old)m.d=nv})));S.library=S.library.filter(d=>d!==old);if(!S.library.includes(nv))S.library.push(nv);save();return render(true)}
  if(ds.act==='pickRank'){V.rank=el.value;return render(true)}
- if(ds.act==='pickBill'){V.bill=el.value;return render(true)}
+ if(ds.act==='pickBill'){V.bill=el.value;V.selSeat=null;return render(true)}
  if(ds.act==='mvTeam'){const s=sc(ds.s),m=s.teams[+ds.t].members.splice(+ds.m,1)[0];s.teams[+el.value].members.push(m);save();return render(true)}
  if(ds.act==='setLead'||ds.act==='setAlt'){const s=sc(ds.s),k=ds.act==='setLead'?'lead':'alt';s.teams.forEach(t=>{if(t[k]===ds.r)t[k]=''});if(+el.value>=0)s.teams[+el.value][k]=ds.r;save();return render(true)}
  if(el.tagName==='SELECT'||el.type==='checkbox'){if(commit(el))render(true);return}
  if(ds.f==='d')commit(el)});
 function arm(btn){if(btn.dataset.armed)return true;btn.dataset.armed='1';const t=btn.textContent;btn.textContent='Tap again to confirm';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=t}},3000);return false}
 function importJSON(txt){const msg=document.getElementById('impMsg');try{const d=JSON.parse(txt);if(!d.roster||!d.scenarios||!d.ship)throw 0;S=Object.assign(clone(DEFAULTS),d);save();render();V.tab='set';render()}catch(e){if(msg)msg.textContent='That file is not a valid backup. Nothing was changed.'}}
+const OPEN_ACTS=['askPerm','card','printCard','printAllCards','printBill','printAllBills','printEverything','unlock','eraseAll'];
 view.addEventListener('click',e=>{
+ if(isLocked()){const a0=e.target.closest('[data-act]');if(a0&&a0.tagName!=='SELECT'&&!OPEN_ACTS.includes(a0.dataset.act)){note(askMsg());return}}
+ const st=e.target.closest('#view .pvw [data-seat]');if(st&&V.tab==='bills'&&V.bill==='seats'){if(isLocked()){note(askMsg());return}seatTap(+st.dataset.seat);return}
  const b=e.target.closest('[data-act]');if(!b||b.tagName==='SELECT'||b.tagName==='INPUT')return;const ds=b.dataset,a=ds.act;
  const s=ds.s?sc(ds.s):null;
  switch(a){
@@ -777,6 +842,13 @@ view.addEventListener('click',e=>{
  case 'printCard':return doPrint(V.card==='both'?[cardHTML(V.rank,'A'),cardHTML(V.rank,'B')]:[cardHTML(V.rank,V.card)],'Duty card '+rn(V.rank));
  case 'printAllCards':return doPrint(allCards(),'All duty cards');
  case 'printBill':return doPrint([V.bill==='general'?generalHTML():V.bill==='seats'?seatPlanHTML():V.bill==='rafts'?raftPageHTML():billHTML(sc(V.bill))],V.bill==='general'?'General emergency instructions':V.bill==='seats'?'Lifeboat seat allocation':V.bill==='rafts'?'Liferaft allocation':'Station bill '+sc(V.bill).name);
+ case 'seatClear':{const o=seatOf(V.selSeat);if(o)o.seat='';V.selSeat=null;save();return render(true)}
+ case 'seatDone':V.selSeat=null;return render(true);
+ case 'askPerm':note(askMsg());return;
+ case 'unlock':{const v=(document.getElementById('pinIn')||{}).value||'';pinOk(v).then(ok=>{if(ok){setUnlocked(true);render()}else{const m=document.getElementById('pinMsg');if(m)m.textContent='Wrong PIN. Ask the '+contact()+' for permission.'}});return}
+ case 'lockNow':setUnlocked(false);V.tab='cards';return render();
+ case 'setPin':{const a1=document.getElementById('pin1').value,a2=document.getElementById('pin2').value,m=document.getElementById('pinSetMsg');if(a1.length<4){m.textContent='Use at least 4 digits.';return}if(a1!==a2){m.textContent="The PINs don't match.";return}makeLock(a1).then(l=>{S.lock=l;setUnlocked(true);save();render(true);note('PIN changed.')});return}
+  case 'eraseAll':if(!arm(b))return;try{localStorage.removeItem(KEY)}catch(e){}setUnlocked(false);location.reload();return;
  case 'autoSeat':{if(!arm(b))return;if(isFF())S.roster.forEach(r=>{r.seat=FF.seats[r.id]||''});else{let n=2;S.roster.forEach(r=>{r.seat=r.id==='CO'?1:n++})}save();return render(true)}
  case 'printAllBills':return doPrint(allBills(),'All station bills');
  case 'printEverything':return doPrint([...allBills(),...allCards()],'Station bills and duty cards');
@@ -803,7 +875,7 @@ view.addEventListener('click',e=>{
  case 'addEq':S.equipment.rows.push(S.equipment.head.map(()=>''));save();return render(true);
  case 'delEq':S.equipment.rows.splice(+ds.i,1);save();return render(true);
  case 'addLib':{const v=document.getElementById('newLib').value.trim();if(v&&!S.library.includes(v))S.library.push(v);save();return render(true)}
- case 'delLib':S.library=S.library.filter(d=>d!==ds.v);if(allDuties().includes(ds.v)){const el=b.closest('.li');el.querySelector('.grow').textContent=ds.v+' (still assigned to a rank)';return}save();return render(true);
+ case 'delLib':S.library=S.library.filter(d=>d!==ds.v);if(dutyUse(ds.v)){const el=b.closest('.li');el.querySelector('.tag').textContent='Still assigned '+dutyUse(ds.v)+'×. Change it on those ranks first, or edit the text instead.';return}save();return render(true);
  case 'export':{if(framed&&DL){DL.save({filename:'station-bill-backup-'+new Date().toISOString().slice(0,10)+'.json',data:JSON.stringify(S,null,1)}).then(()=>note('Backup saved.'),()=>note('Backup not saved. Try again or use Copy backup text.'));return}const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const a2=document.createElement('a');a2.href=URL.createObjectURL(blob);a2.download='station-bill-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a2);a2.click();a2.remove();return}
  case 'copyExport':{const t=JSON.stringify(S);const ta=document.getElementById('impT');ta.value=t;try{navigator.clipboard.writeText(t).then(()=>document.getElementById('impMsg').textContent='Backup copied. Paste it into a note or email to keep it.',()=>document.getElementById('impMsg').textContent='Backup text is in the box below. Select all and copy.')}catch(e){document.getElementById('impMsg').textContent='Backup text is in the box below. Select all and copy.'}return}
  case 'importText':return importJSON(document.getElementById('impT').value);

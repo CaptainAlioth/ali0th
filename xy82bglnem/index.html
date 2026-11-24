@@ -104,11 +104,11 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 .a4 .seat{width:23mm;height:23mm;border:1.2mm solid var(--red);border-radius:1.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
 .a4 .seat small{font:700 7.5pt var(--cond);letter-spacing:.3px;color:var(--red);text-transform:uppercase;text-align:center;line-height:1.05}
 .a4 .seat b{font:700 30pt/1 var(--cond);color:#111}
-.a4 .sp{display:grid;grid-template-columns:100mm 1fr;gap:4mm;margin-top:3mm;align-items:start}
+.a4 .sp{display:grid;grid-template-columns:88mm 1fr;gap:4mm;margin-top:3mm;align-items:start}
 .a4 .sp svg{width:100%;height:auto;display:block}
 .a4 table.st{width:100%;border-collapse:collapse;font-size:9.5pt}
 .a4 table.st th{background:#111;color:#fff;text-align:left;font:600 8.5pt var(--sans);padding:1mm 2mm}
-.a4 table.st td{border:.25mm solid #999;padding:.9mm 2mm}
+.a4 table.st td{border:.25mm solid #999;padding:.3mm 1.4mm;font-size:8.8pt;line-height:1.25}
 .a4 table.st td:first-child{width:12mm;text-align:center;font-weight:700;color:var(--red)}
 .a4 table.st tr.sp0 td{color:#888}
 /* liferaft square + muster badges */
@@ -133,9 +133,9 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 .a4 .bicon small{font:700 7pt/1.1 var(--cond);text-transform:uppercase;text-align:center;margin-top:.5mm}
 .a4 .sideP{color:#d42a20}.a4 .sideS{color:#178a3a}
 .a4 .rf .bx.P{border-color:#d42a20}.a4 .rf .bx.P h4{background:#d42a20}.a4 .rf .bx.S{border-color:#178a3a}.a4 .rf .bx.S h4{background:#178a3a}
-.a4 .seat.LB{border-color:#E06A00;width:27mm}.a4 .seat.LB small{font-size:8pt}.a4 .seat.LB b,.a4 .seat.LB small{color:#E06A00}.a4 .lbc{color:#E06A00}
+.a4 .seat.LB{border-color:var(--c,#111);width:27mm}.a4 .seat.LB small{font-size:8pt}.a4 .seat.LB b,.a4 .seat.LB small{color:var(--c,#111)}.a4 .lbc{color:#E06A00}
 .a4 .grp{display:flex;align-items:flex-end;gap:2mm}.a4 .grp+.grp{border-left:.4mm solid #bbb;padding-left:5mm;margin-left:2mm}
-.a4 .bicon.lb small{color:#E06A00}
+.a4 .bicon.lb small{color:#111}
 /* bills */
 .a4.bill{min-height:297mm}
 .a4 .band{background:#111;color:#fff;font:700 15pt/1.1 var(--cond);text-transform:uppercase;letter-spacing:.5px;padding:2mm 3mm;margin-top:3mm;text-align:center}
@@ -367,16 +367,27 @@ function applySop(D){
    if(!t.members.some(m=>/off-duty and on-duty/i.test(m.l)))['BSN','DF','AB1','AB2','OS1','OS2','OSMC','AETO','EF','MM','CK','CA'].forEach(r=>{if(D.roster.some(q=>q.id===r))t.members.push(M(r,'Report immediately to the Chief Officer. Don suitable outfit for clean-up.','','Ratings (off-duty and on-duty)'))})}
   if(x.instructions.indexOf('Training and exercise')<0)x.instructions+='\n\nTraining and exercise: the team shall be trained in the use of the oil spill contingency equipment and absorbents on board, kept in designated locations. All exercises and training are logged in the oil pollution prevention drill records of the SOPEP, with entries in the deck log book including scenario and lessons learned.'}
  D.sop0095=1}
-const DEFAULTS=SEED();applyProc(DEFAULTS);applySop(DEFAULTS);
+const FF={L:[1,3,5,9,11,13,15,17,19,21,23,25,27,29,31],R:[2,4,6,7,8,10,12,14,16,18,20,22,24,26,28,30,32],helm:5,injured:7,
+ pos:{31:[160,140],30:[261,140],32:[362,140],29:[100,235],28:[422,235],27:[60,330],25:[150,330],24:[372,330],26:[462,330],23:[60,420],21:[150,420],20:[372,420],22:[462,420],19:[60,510],17:[150,510],16:[372,510],18:[462,510],15:[60,600],13:[150,600],12:[372,600],14:[462,600],11:[60,690],9:[150,690],8:[372,690],10:[462,690],5:[60,780],6:[372,780],7:[462,780],3:[60,870],1:[150,870],2:[372,870],4:[462,870]},
+ spare:{3:'Spare crew',19:'Spare crew',22:'Spare pax',26:'Spare crew/pax',28:'Spare crew/pax',29:'Spare crew/pax',30:'Spare crew/pax',31:'Spare crew/pax',32:'Spare crew/pax'},
+ seats:{BSN:1,DF:2,'4E':4,CO:5,'2O':6,CE:8,MA:9,'2E':10,'3O':11,'3E':12,J3O:13,ETO:14,AB1:15,OS1:16,AB2:17,OS2:18,OSMC:19,MM:20,EF:21,CDT:23,CA:24,CK:25,AETO:27}};
+const FF_NOTES='First to board: the INJURED (seat 7). Then board in DESCENDING seat number order (highest number first), so the boat fills from the bow outward towards the entrance. Take your seat and secure the seat belt. Get immersion suits and lifejackets from the storage box on your side: STBD side box for green (left) seats, PORT side box for red (right) seats.';
+const FF_LAUNCH='1. Remove lashing and electrical supply.\n2. Embarkation.\n3. Take seated position and secure seat belts.\n4. Secure hatches.\n5. Start engine.\n6. Ensure clear landing.\n7. Release boat.\n8. Steer away.';
+function applyFF(D){Object.assign(D.boat,{layout:'ff750',name:'Schat-Harding FF750 free-fall survival craft',capacity:32,spec:'Capacity 32 persons · LOA 8.97 m × beam 2.8 m × height 3.25 m · max free-fall height 23 m · 40 HP diesel, 6 knots',notes:FF_NOTES,launch:FF_LAUNCH});
+ D.roster.forEach(r=>{r.seat=FF.seats[r.id]||'';if(r.id==='CO'&&r.raft==='P')r.raft='A'})}
+const DEFAULTS=SEED();applyProc(DEFAULTS);applySop(DEFAULTS);applyFF(DEFAULTS);
+{const x=DEFAULTS.scenarios.find(q=>/man overboard/i.test(q.name)),t=x&&x.teams.find(q=>/lookout/i.test(q.name)),P={CDT:'Lookout: forward',MM:'Lookout: forward',EF:'Lookout: aft',OSMC:'Lookout: aft',OS1:'Lookout: port bridge wing',OS2:'Lookout: stbd bridge wing'};if(t)t.members.forEach(m=>{if(P[m.r])m.mu=P[m.r]});DEFAULTS.mobLook=1}
 if(!S||!S.roster||!S.scenarios){S=clone(DEFAULTS);S.library=allDuties();}
 if(!S.proc0428){applyProc(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+if(S.boat&&!S.boat.layout){applyFF(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+if(!S.mobLook){S.mobLook=1;const x=S.scenarios.find(q=>/man overboard/i.test(q.name));const t=x&&x.teams.find(q=>/lookout/i.test(q.name));const P={CDT:'Lookout: forward',MM:'Lookout: forward',EF:'Lookout: aft',OSMC:'Lookout: aft',OS1:'Lookout: port bridge wing',OS2:'Lookout: stbd bridge wing'};if(t)t.members.forEach(m=>{if(P[m.r]&&!m.mu)m.mu=P[m.r]});try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 if(!S.sop0095){applySop(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function allDuties(){const set=new Set(S.library||[]);S.scenarios.forEach(s=>s.teams.forEach(t=>t.members.forEach(m=>m.d&&set.add(m.d))));return [...set].sort()}
 if(!S.boat)S.boat=clone(DEFAULTS.boat);
 if(!S.rafts)S.rafts=clone(DEFAULTS.rafts);
 if(!S.cardA){S.cardA=DEFAULTS.cardA;const A=S.scenarios.filter(x=>x.group==='A').map(x=>x.name).sort().join('|');if(A===['Abandon ship – lifeboat','Abandon ship – liferaft','Fire'].sort().join('|'))S.scenarios.forEach(x=>{if(/^man overboard$|^enclosed space/i.test(x.name))x.group='A'})}
 if(S.boat&&S.boat.notes&&S.boat.notes.indexOf('Board through the stern hatch and fill forward seats first.')===0)S.boat.notes=S.boat.notes.replace('Board through the stern hatch and fill forward seats first.','Board through the lifeboat entrance and fill forward seats first, taking your seat on the LEFT or RIGHT side as you board.');
-if(!S.raftAuto){S.raftAuto=1;S.roster.forEach(r=>{r.raft=r.id==='CO'?'P':'A'})}
+if(!S.raftAuto){S.raftAuto=1;S.roster.forEach(r=>{r.raft='A'})}
 if(!S.roster.some(r=>r.seat)){let n=2;S.roster.forEach(r=>{r.seat=r.id==='CO'?1:n++})}
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}const el=document.getElementById('saved');el.classList.add('on');setTimeout(()=>el.classList.remove('on'),900)},250)}
 const V={tab:'cards',rank:'AB1',card:'A',bill:null,rankEdit:null,scEdit:null};
@@ -386,7 +397,7 @@ const sc=id=>S.scenarios.find(s=>s.id===id);
 const shipIds=()=>[S.ship.call,S.ship.port,S.ship.imo?'IMO '+S.ship.imo:''].filter(Boolean).map(esc).join(' · ');
 
 /* ================= SIGNALS ================= */
-const RED='#d42a20';
+const RED='#d42a20',GREEN='#178a3a';
 function sigSvg(kind){
  if(kind==='fire')return `<svg viewBox="0 0 400 12" preserveAspectRatio="none"><rect x="0" y="2" width="400" height="8" rx="1.5" fill="${RED}"/></svg>`;
  if(kind==='mob'){let r='';for(let i=0;i<3;i++)r+=`<rect x="${i*140}" y="2" width="120" height="8" rx="1.5" fill="${RED}"/>`;return `<svg viewBox="0 0 400 12" preserveAspectRatio="none">${r}</svg>`}
@@ -405,20 +416,24 @@ function assignmentsFor(s,rid){
 function entryHTML(s,rid){
  const {out,alts}=assignmentsFor(s,rid);
  const rr=rank(rid)||{};
- let items=out.map(({t,m})=>`<li><div class="tm">${(t.muster||s.muster)?`<span class="mb">${esc(shortLoc(t.muster||s.muster))}</span>`:''}${esc(t.name)}</div><div class="du">${/lifeboat/i.test(t.name+' '+s.name)&&rr.seat?`<span class="cd lbc">Seat ${esc(rr.seat)}, ${sideTxt(rr.seat).toLowerCase()}:</span> `:''}${/liferaft/i.test(t.name+' '+s.name)&&effRaft(rr)?`<span class="cd side${effRaft(rr)}">${raftName(effRaft(rr))} liferaft (${esc(raftLoc(effRaft(rr)))}):</span> `:''}${m.c?`<span class="cd">If ${m.c==='on'?'on watch':'off watch'}:</span> `:''}${esc(m.d)}</div></li>`);
+ let items=out.map(({t,m})=>`<li><div class="tm">${(m.mu||t.muster||s.muster)?`<span class="mb">${esc(m.mu||shortLoc(t.muster||s.muster))}</span>`:''}${esc(t.name)}</div><div class="du">${/lifeboat/i.test(t.name+' '+s.name)&&rr.seat?`<span class="cd" style="color:${sideCol(rr.seat)}">Seat ${esc(rr.seat)}, ${sideTxt(rr.seat).toLowerCase()}${seatSide(rr.seat)?' · suit and lifejacket from '+(seatSide(rr.seat)==='L'?'STBD':'PORT')+' side box':''}:</span> `:''}${m.c?`<span class="cd">If ${m.c==='on'?'on watch':'off watch'}:</span> `:''}${esc(m.d)}</div></li>`);
  alts.forEach(t=>{if(!out.some(o=>o.t===t&&/alternate|acts as team leader/i.test(o.m.d)))items.push(`<li><div class="tm">${(t.muster||s.muster)?`<span class="mb">${esc(shortLoc(t.muster||s.muster))}</span>`:''}Alternate leader · ${esc(t.name)}</div><div class="du">Acts as Team Leader if ${esc(rn(t.lead))} is unavailable.</div></li>`)});
  if(!items.length)items=[`<li><div class="tm"><span class="mb">${esc(shortLoc(s.muster))}</span></div><div class="du">${esc(s.unassigned||DISP)}</div></li>`];
  const rt=s.alarm==='fire'?`<span class="rt">Fire alarm</span>`:s.mobAlarm?`<span class="rt">${sigSvg('mob')}3 long: secondary</span>`:'';
  return `<div class="en"><div class="enh"><span>${esc(s.name)}</span>${rt}</div><ol class="as${items.length===1?' one':''}">${items.join('')}</ol>${s.keyNote?`<div class="kn">${esc(s.keyNote)}</div>`:''}</div>`}
-const GREEN='#178a3a';
-const seatSide=n=>{n=+n;if(!n||n===1)return '';const per=Math.min(6,Math.max(2,+S.boat.perRow||4)),half=Math.ceil(per/2);return ((n-2)%per)<half?'L':'R'};
+
+const isFF=()=>S.boat&&S.boat.layout==='ff750';
+const helmSeat=()=>isFF()?FF.helm:1;
+const sideCol=n=>{const d=seatSide(n);return d==='L'?GREEN:d==='R'?RED:'#111'};
+const spareLbl=n=>isFF()?(+n===FF.injured?'Injured':(FF.spare[n]||'Spare')):'Spare';
+const seatSide=n=>{n=+n;if(isFF())return FF.L.includes(n)?'L':FF.R.includes(n)?'R':'';if(!n||n===1)return '';const per=Math.min(6,Math.max(2,+S.boat.perRow||4)),half=Math.ceil(per/2);return ((n-2)%per)<half?'L':'R'};
 const effRaft=r=>!r?'':r.raft==='A'?(seatSide(r.seat)==='L'?'S':seatSide(r.seat)==='R'?'P':''):(r.raft||'');
-const sideTxt=n=>+n===1?'Coxswain':seatSide(n)==='L'?'Left as you board':seatSide(n)==='R'?'Right as you board':'';
-function lbIcon(seat){const sd=seatSide(seat),OR='#E06A00',hl=sd==='L'?'R':sd==='R'?'L':'';const on=v=>hl===v?1:.18;
- return `<svg viewBox="0 -24 100 174"><path d="M50 -22 V2" stroke="${OR}" stroke-width="6"/><path d="M40 -6 L50 6 L60 -6Z" fill="${OR}"/>
- <path d="M50 146 C28 132 14 110 14 82 L14 14 Q14 6 24 6 L50 6Z" fill="${OR}" opacity="${on('L')}"/><path d="M50 146 C72 132 86 110 86 82 L86 14 Q86 6 76 6 L50 6Z" fill="${OR}" opacity="${on('R')}"/>
+const sideTxt=n=>+n===helmSeat()?(isFF()?'Helm · left as you board':'Coxswain'):seatSide(n)==='L'?'Left as you board':seatSide(n)==='R'?'Right as you board':'';
+function lbIcon(seat){const sd=seatSide(seat),hl=sd==='L'?'R':sd==='R'?'L':'';const on=v=>hl===v?1:.15;const n=+seat||0;const cy=isFF()?(n<=7?118:n>=28?28:118-((n-7)/21)*86):60;
+ return `<svg viewBox="0 -24 100 174"><path d="M50 -22 V2" stroke="#111" stroke-width="6"/><path d="M40 -6 L50 6 L60 -6Z" fill="#111"/>
+ <path d="M50 146 C28 132 14 110 14 82 L14 14 Q14 6 24 6 L50 6Z" fill="${RED}" opacity="${on('L')}"/><path d="M50 146 C72 132 86 110 86 82 L86 14 Q86 6 76 6 L50 6Z" fill="${GREEN}" opacity="${on('R')}"/>
  <path d="M50 146 C28 132 14 110 14 82 L14 14 Q14 6 24 6 L76 6 Q86 6 86 14 L86 82 C86 110 72 132 50 146Z" fill="none" stroke="#111" stroke-width="4"/><line x1="50" y1="6" x2="50" y2="146" stroke="#111" stroke-width="2"/>
- ${seat?`<circle cx="${hl==='L'?32:hl==='R'?68:50}" cy="${hl?60:22}" r="11" fill="#fff" stroke="#111" stroke-width="3"/>`:''}</svg>`}
+ ${seat?`<circle cx="${hl==='L'?32:hl==='R'?68:50}" cy="${hl?Math.max(24,Math.min(124,150-cy)):22}" r="11" fill="#fff" stroke="#111" stroke-width="3"/>`:''}</svg>`}
 function boatIcon(side){const on=v=>side===v?1:.15;
  return `<svg viewBox="0 0 100 150"><path d="M50 4 C28 18 14 40 14 68 L14 136 Q14 146 24 146 L50 146Z" fill="${RED}" opacity="${on('P')}"/><path d="M50 4 C72 18 86 40 86 68 L86 136 Q86 146 76 146 L50 146Z" fill="${GREEN}" opacity="${on('S')}"/><path d="M50 4 C28 18 14 40 14 68 L14 136 Q14 146 24 146 L76 146 Q86 146 86 136 L86 68 C86 40 72 18 50 4Z" fill="none" stroke="#111" stroke-width="4"/><line x1="50" y1="6" x2="50" y2="146" stroke="#111" stroke-width="2"/>${side?`<circle cx="${side==='P'?32:68}" cy="92" r="11" fill="#fff" stroke="#111" stroke-width="3"/>`:''}</svg>`}
 const raftName=v=>v==='P'?'Port':v==='S'?'Starboard':'';const raftLoc=v=>v==='P'?S.rafts.port:v==='S'?S.rafts.stbd:'';
@@ -433,7 +448,7 @@ function cardHTML(rid,g){
  const rows='<tr><td style="height:13mm"></td><td></td></tr>';
  return `<div class="a4 card" data-rank="${esc(rid)}" data-g="${g}">
  ${g==='A'?`<div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div><div class="k" style="font:700 12pt var(--cond);letter-spacing:.4px;margin-top:2mm">EMERGENCY DUTY CARD A</div><div class="ids">${esc(S.cardA||'Fire, abandon ship and rescue')}${r&&r.watch?' · Watchkeeper':''}</div><div class="rank">${esc(r?r.name:rid)}</div></div>
- <div class="phr"><div class="grp"><div class="bicon lb">${lbIcon(r&&r.seat)}<small>Lifeboat<br>faces aft</small></div><div class="seat LB"><small>Lifeboat seat</small><b>${r&&r.seat?esc(r.seat):'–'}</b><small>${r&&r.seat?sideTxt(r.seat):''}</small></div></div><div class="grp"><div class="bicon">${boatIcon(effRaft(r))}<small class="${effRaft(r)?'side'+effRaft(r):''}">${effRaft(r)?(effRaft(r)==='P'?'Go port':'Go stbd'):'No raft'}</small></div><div class="seat raft ${effRaft(r)||'N'}"><small>Liferaft</small><b>${effRaft(r)?(effRaft(r)==='P'?'PORT':'STBD'):'–'}</b><i>${effRaft(r)?esc(shortLoc(raftLoc(effRaft(r))).split(',')[0]):''}</i></div></div></div></div>`:`<div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div>
+ <div class="phr"><div class="grp"><div class="bicon lb">${lbIcon(r&&r.seat)}<small>Lifeboat<br>faces aft</small></div><div class="seat LB" style="--c:${r&&r.seat?sideCol(r.seat):'#111'}"><small>Lifeboat seat</small><b>${r&&r.seat?esc(r.seat):'–'}</b><small>${r&&r.seat?sideTxt(r.seat):''}</small></div></div></div></div>`:`<div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div>
  <div class="phr"><div class="ttl"><div class="k">EMERGENCY DUTY CARD ${g}</div><div class="s2">${g==='A'?'Fire and abandon ship':'Other emergencies'}${r&&r.watch?' · Watchkeeper':''}</div><div class="rank">${esc(r?r.name:rid)}</div></div></div></div>`}
  ${alarmBlock(kinds)}
  <div class="cbody">${body||'<p>No scenarios in this card group.</p>'}</div>
@@ -456,7 +471,7 @@ function teamRows(t){
   const row={m,ranks:[m.r]};if(m.l)seen[key]=row;rows.push(row)});
  return rows.map(({m,ranks})=>{
   const lead=!m.l&&m.r===t.lead;
-  let pos=m.l?`${esc(m.l)}<span class="rs">${ranks.map(rn).map(esc).join(', ')}${m.c?' · '+(m.c==='on'?'on watch':'off watch'):''}</span>`:esc(rn(m.r))+(m.c?`<span class="rs">${m.c==='on'?'If on watch':'If off watch'}</span>`:'');
+  let pos=(m.mu?'':'')+(m.l?`${esc(m.l)}<span class="rs">${ranks.map(rn).map(esc).join(', ')}${m.c?' · '+(m.c==='on'?'on watch':'off watch'):''}</span>`:esc(rn(m.r))+(m.c?`<span class="rs">${m.c==='on'?'If on watch':'If off watch'}</span>`:''))+(m.mu?`<span class="rs" style="font-weight:700;color:#111">${esc(m.mu)}</span>`:'');
   if(lead&&t.alt)pos+=`<span class="alt">Alt: ${esc(rn(t.alt))}</span>`;
   return `<tr><td class="${lead?'ld':''}">${pos}</td><td class="${lead?'ld':''}">${esc(m.d)}</td></tr>`}).join('')}
 function billHTML(s){
@@ -471,7 +486,7 @@ function billHTML(s){
  ${alarmBlock(kinds,s.alarmText)}
  <div class="mbig"><div class="l">Muster<br>station</div><div class="v">${esc(s.muster)}${s.alarm==='fire'?'<div style="font:500 9.5pt var(--sans);text-transform:none">Fire teams proceed to their fire stations</div>':''}</div></div>
  ${s.fireStations?`<div class="meta">${fs.map(f=>`<div><b>${esc(f.split(':')[0])}:</b> ${esc(f.split(':').slice(1).join(':'))}</div>`).join('')}</div>`:''}
- ${/liferaft/i.test(s.name+' '+s.title)?`<div class="meta"><div><b>Port liferaft:</b> ${esc(S.rafts.port)} · ${S.roster.filter(r=>effRaft(r)==='P').length} crew</div><div><b>Starboard liferaft:</b> ${esc(S.rafts.stbd)} · ${S.roster.filter(r=>effRaft(r)==='S').length} crew</div></div>`:''}
+ ${/liferaft/i.test(s.name+' '+s.title)?`<div class="meta"><div><b>Liferafts:</b> ${esc(S.rafts.port)} · ${esc(S.rafts.stbd)} · no fixed allocation, crew board as directed by the officer in charge</div></div>`:''}
  ${s.immediate?`<div class="imm"><b>IMMEDIATE ACTION:</b> ${esc(s.immediate)}</div>`:''}
  ${s.teams.map(t=>`<div class="tb"><div class="tbh">${esc(t.name)}<span><span class="tm2">${esc(shortLoc(t.muster||s.muster))}</span>${t.lead?' Leader: '+esc(rn(t.lead)):''}</span></div>${t.task?`<div class="tbt">${esc(t.task)}</div>`:''}<table class="dt"><tr><th>Position</th><th>Duties</th></tr>${teamRows(t)}</table></div>`).join('')}
  <div class="un"><b>ALL OTHER CREW:</b> ${un.length?un.map(r=>esc(r.name)).join(', ')+' — ':''}${esc(s.unassigned||DISP)}</div>
@@ -493,7 +508,24 @@ function generalHTML(){
 /* ================= LIFEBOAT SEAT PLAN ================= */
 const seatOf=n=>S.roster.find(r=>+r.seat===n);
 function wrapName(t,max){const w=String(t).split(/\s+/),L=[];let c='';w.forEach(x=>{if((c+' '+x).trim().length>max&&c){L.push(c);c=x}else c=(c+' '+x).trim()});if(c)L.push(c);if(L.length>2){L[1]=L.slice(1).join(' ');L.length=2;if(L[1].length>max)L[1]=L[1].slice(0,max-1)+'…'}return L}
-function boatSvg(){
+function ffSvg(){
+ const W=78,H=64;let g=`<path d="M300 18 C430 60 545 190 560 300 L560 950 Q560 990 520 990 L80 990 Q40 990 40 950 L40 300 C55 190 170 60 300 18Z" fill="#f1f1f1" stroke="#111" stroke-width="4"/>
+ <text x="300" y="72" text-anchor="middle" font-size="20" font-weight="700" fill="#111">BOW</text><text x="300" y="92" text-anchor="middle" font-size="12" fill="#444">(points aft of the ship)</text>
+ <rect x="262" y="235" width="76" height="150" rx="4" fill="#dbe6f4" stroke="#111" stroke-width="1.5"/><text transform="translate(305 310) rotate(-90)" text-anchor="middle" font-size="15" font-weight="700" fill="#244a7a">WATER</text>
+ <rect x="262" y="392" width="76" height="92" rx="4" fill="#e6e6e6" stroke="#111" stroke-width="1.5"/><text transform="translate(305 438) rotate(-90)" text-anchor="middle" font-size="13" font-weight="700" fill="#333">PROVISION</text>`;
+ for(const k in FF.pos){const n=+k,[x,y]=FF.pos[k],w=n===FF.helm?168:W,col=sideCol(n),r=seatOf(n),inj=n===FF.injured&&!r;
+  if(inj){g+=`<rect x="${x}" y="${y}" width="${w}" height="${H}" rx="8" fill="${RED}" stroke="#111" stroke-width="1.5"/><text x="${x+w/2}" y="${y+24}" text-anchor="middle" font-size="19" font-weight="700" fill="#fff">+ ${n}</text><text x="${x+w/2}" y="${y+48}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">INJURED</text>`;continue}
+  const lines=r?wrapName((String(r.name).match(/\(([^)]+)\)/)||[])[1]||r.name,w>100?18:10):wrapName(spareLbl(n),10);
+  g+=`<rect x="${x}" y="${y}" width="${w}" height="${H}" rx="8" fill="#fff" stroke="${col}" stroke-width="3.2"/><text x="${x+7}" y="${y+22}" font-size="18" font-weight="700" fill="${col}">${n}</text>${n===FF.helm?`<text x="${x+w-8}" y="${y+20}" text-anchor="end" font-size="12" font-weight="700" fill="#111">HELM</text>`:''}
+  ${lines.map((l,i)=>`<text x="${x+w/2+(w>100?0:6)}" y="${y+(lines.length>1?38:44)+i*15}" text-anchor="middle" font-size="${w>100?16:13}" font-weight="${r?700:400}" fill="${r?'#111':'#888'}">${esc(l)}</text>`).join('')}`}
+ g+=`<rect x="250" y="944" width="100" height="34" rx="4" fill="#111"/><text x="300" y="966" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">ENTRANCE</text>
+ <path d="M300 1078 V984" stroke="#111" stroke-width="7"/><path d="M286 990 L300 972 L314 990Z" fill="#111"/>
+ <path d="M246 961 H112" stroke="${GREEN}" stroke-width="5"/><path d="M114 951 L96 961 L114 971Z" fill="${GREEN}"/><text x="170" y="952" text-anchor="middle" font-size="12" font-weight="700" fill="${GREEN}">LEFT</text>
+ <path d="M354 961 H488" stroke="${RED}" stroke-width="5"/><path d="M486 951 L504 961 L486 971Z" fill="${RED}"/><text x="430" y="952" text-anchor="middle" font-size="12" font-weight="700" fill="${RED}">RIGHT</text>
+ <rect x="40" y="1002" width="234" height="72" rx="4" fill="#fff" stroke="${GREEN}" stroke-width="3"/><text x="157" y="1024" text-anchor="middle" font-size="13" font-weight="700" fill="${GREEN}">LEFT as you board = SHIP STBD</text><text x="157" y="1044" text-anchor="middle" font-size="12" fill="#111">Immersion suits and lifejackets</text><text x="157" y="1062" text-anchor="middle" font-size="12" font-weight="700" fill="${GREEN}">STBD side storage box</text>
+ <rect x="326" y="1002" width="234" height="72" rx="4" fill="#fff" stroke="${RED}" stroke-width="3"/><text x="443" y="1024" text-anchor="middle" font-size="13" font-weight="700" fill="${RED}">RIGHT as you board = SHIP PORT</text><text x="443" y="1044" text-anchor="middle" font-size="12" fill="#111">Immersion suits and lifejackets</text><text x="443" y="1062" text-anchor="middle" font-size="12" font-weight="700" fill="${RED}">PORT side storage box</text>`;
+ return `<svg viewBox="0 0 600 1082" font-family="Barlow,'Avenir Next Condensed','Arial Narrow',Arial,sans-serif">${g}</svg>`}
+function boatSvg(){if(isFF())return ffSvg();
  const cap=Math.max(2,+S.boat.capacity||26),per=Math.min(6,Math.max(2,+S.boat.perRow||4)),rows=Math.ceil((cap-1)/per);
  const aisle=28,gap=6,sw=Math.min(110,(470-aisle-gap*(per-2))/per),sh=70,rh=80,half=Math.ceil(per/2);
  const OR='#E06A00',tw=per*sw+(per-2)*gap+aisle,x0=300-tw/2,top=200,cy=top+rows*rh+20,H=cy+200;
@@ -502,7 +534,7 @@ function boatSvg(){
  g+=`<text x="300" y="80" text-anchor="middle" font-size="20" font-weight="700" fill="#111">BOW</text><text x="300" y="58" text-anchor="middle" font-size="12" fill="#444">(points aft of the ship)</text><text x="64" y="${top-30}" font-size="15" font-weight="700" fill="${OR}">← LEFT as you board</text><text x="64" y="${top-12}" font-size="12" font-weight="600" fill="${GREEN}">Ship's stbd side · stbd liferaft</text><text x="536" y="${top-30}" text-anchor="end" font-size="15" font-weight="700" fill="${OR}">RIGHT as you board →</text><text x="536" y="${top-12}" text-anchor="end" font-size="12" font-weight="600" fill="${RED}">Ship's port side · port liferaft</text><path d="M300 92 l-10 18 h20z" fill="#111" transform="rotate(180 300 101)"/>`;
  const seat=(x,y,w,n,cox)=>{const r=seatOf(n);const lines=r?wrapName((String(r.name).match(/\(([^)]+)\)/)||[])[1]||r.name,w>130?20:w>95?11:8):['Spare'];const cx=x+30+(w-34)/2;
   return `<rect x="${x}" y="${y}" width="${w}" height="${sh}" rx="6" fill="#fff" stroke="${cox?'#d42a20':'#111'}" stroke-width="${cox?3:1.6}"/><rect x="${x+3}" y="${y+3}" width="${w-6}" height="7" rx="2" fill="#111"/>
-  <text x="${x+7}" y="${y+33}" font-size="19" font-weight="700" fill="${cox?'#111':OR}">${n}</text>
+  <text x="${x+7}" y="${y+33}" font-size="19" font-weight="700" fill="${cox?'#111':sideCol(n)}">${n}</text>
   ${lines.map((l,i)=>`<text x="${cx}" y="${y+(lines.length>1?36:44)+i*16}" text-anchor="middle" font-size="${w>95?13:11}" font-weight="${r?600:400}" fill="${r?'#111':'#999'}">${esc(l)}</text>`).join('')}`};
  let n=2;for(let row=0;row<rows;row++)for(let i=0;i<per&&n<=cap;i++,n++)g+=seat(sx(i),top+row*rh,sw,n);
  g+=seat(300-85,cy+18,170,1,1)+`<text x="300" y="${cy+12}" text-anchor="middle" font-size="14" font-weight="700" fill="#d42a20">COXSWAIN</text>`;
@@ -513,15 +545,17 @@ function boatSvg(){
  <text x="110" y="${H-82}" font-size="13" font-weight="700" fill="${OR}">LEFT</text><text x="490" y="${H-82}" text-anchor="end" font-size="13" font-weight="700" fill="${OR}">RIGHT</text>`;
  return `<svg viewBox="0 0 600 ${H+32}" font-family="Barlow,'Avenir Next Condensed','Arial Narrow',Arial,sans-serif">${g}</svg>`}
 function seatPlanHTML(){
- const cap=Math.max(2,+S.boat.capacity||26);let rows='';for(let n=1;n<=cap;n++){const r=seatOf(n);const er=r?effRaft(r):'';rows+=`<tr class="${r?'':'sp0'}"><td style="color:${n===1?'#111':'#E06A00'}">${n}</td><td>${r?esc(r.name):'Spare'}</td><td style="font-size:8.5pt">${n===1?'Coxswain':seatSide(n)==='L'?'Left':'Right'}</td><td style="font-size:8.5pt;font-weight:700;color:${er==='P'?RED:er==='S'?GREEN:'#888'}">${er==='P'?'Port':er==='S'?'Stbd':'–'}</td></tr>`}
+ const cap=isFF()?32:Math.max(2,+S.boat.capacity||26),hs=helmSeat();let rows='';
+ for(let n=1;n<=cap;n++){const r=seatOf(n);const er=r?effRaft(r):'';const sd=seatSide(n);
+  rows+=`<tr class="${r?'':'sp0'}"><td style="color:${sideCol(n)}">${n}</td><td>${r?esc((String(r.name).match(/\(([^)]+)\)/)||[])[1]||r.name):(isFF()&&n===FF.injured?'<b style="color:#d42a20">Injured (first to board)</b>':esc(spareLbl(n)))}</td><td style="font-size:8.5pt;color:${sideCol(n)};font-weight:700">${n===hs?'Helm':sd==='L'?'Left':sd==='R'?'Right':''}</td></tr>`}
  const none=S.roster.filter(r=>!r.seat||+r.seat>cap);
  return `<div class="a4 bill">
  <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">LIFEBOAT SEAT ALLOCATION</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
- <div class="band">${esc(S.boat.name)} · ${cap} persons</div>
- ${alarmBlock(['general'],BOAT_AL)}
- <div class="sp"><div>${boatSvg()}<div class="ids" style="text-align:center">Seen as you board through the lifeboat entrance. The boat faces aft: its left side is the ship's starboard side.</div></div>
- <div><table class="st"><colgroup><col style="width:10mm"><col><col style="width:14mm"><col style="width:12mm"></colgroup><tr><th>Seat</th><th>Rank</th><th>Side</th><th>Raft</th></tr>${rows}</table>${none.length?`<p class="ids"><b>No seat:</b> ${none.map(r=>esc(r.name)).join(', ')}</p>`:''}</div></div>
- ${S.boat.notes?`<div class="ins"><h5>Boarding</h5>${esc(S.boat.notes)}</div>`:''}
+ <div class="band" style="font-size:13pt">${esc(S.boat.name)} · ${cap} persons</div>
+ ${S.boat.spec?`<div class="ids" style="text-align:center;margin-top:1mm">${esc(S.boat.spec)}</div>`:''}
+ <div class="sp"><div>${boatSvg()}<div class="ids" style="text-align:center">Bow at top, entrance at the bottom, as you board. The boat faces aft: green seats are on the ship's starboard side, red seats on the ship's port side.</div></div>
+ <div><table class="st"><colgroup><col style="width:9mm"><col><col style="width:14mm"></colgroup><tr><th>Seat</th><th>Rank</th><th>Side</th></tr>${rows}</table>${none.length?`<p class="ids"><b>No seat:</b> ${none.map(r=>esc(r.name)).join(', ')}</p>`:''}</div></div>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm">${S.boat.notes?`<div class="ins"><h5>Boarding</h5>${esc(S.boat.notes)}</div>`:''}${S.boat.launch?`<div class="ins"><h5>Launching procedure</h5>${esc(S.boat.launch)}</div>`:''}</div>
  <div class="foot">Each crew member's seat number is shown on Emergency Duty Card A</div></div>`}
 function raftPageHTML(){
  const col=v=>{const L=S.roster.filter(r=>effRaft(r)===v);return `<div class="bx ${v}"><h4>${v==='P'?'Port':'Starboard'} liferaft</h4><div class="loc">${esc(raftLoc(v))} · ${L.length} crew</div><ol>${L.map(r=>`<li>${esc(r.name)}${r.seat?` <span style="color:#666;font-size:9pt">· lifeboat seat ${esc(r.seat)}</span>`:''}</li>`).join('')||'<li>None</li>'}</ol></div>`};
@@ -564,7 +598,7 @@ async function doPrint(pages,label){
  setTimeout(()=>{try{window.print()}catch(e){}},80)}
 addEventListener('afterprint',()=>{document.getElementById('print').innerHTML=''});
 const allCards=()=>S.roster.flatMap(r=>[cardHTML(r.id,'A'),cardHTML(r.id,'B')]);
-const allBills=()=>[generalHTML(),seatPlanHTML(),raftPageHTML(),...S.scenarios.map(billHTML)];
+const allBills=()=>[generalHTML(),seatPlanHTML(),...S.scenarios.map(billHTML)];
 const fitWarn='<div class="warn fitw" hidden>This card is too long for one A4 page. Shorten the longest key notes or duties in Drills.</div>';
 
 /* ================= VIEWS ================= */
@@ -581,21 +615,25 @@ function vCards(){
  <p class="hint">Card A: ${esc(S.cardA)}. Card B: other emergencies. Rank only, no names. Crew sign by hand.</p></div>
  ${pages.map(p=>fitWarn+pv(p)).join('')}`}
 function vBills(){
- const ids=['general','seats','rafts',...S.scenarios.map(s=>s.id)];if(!ids.includes(V.bill))V.bill=S.scenarios[0]?S.scenarios[0].id:'general';
+ const ids=['general','seats',...S.scenarios.map(s=>s.id)];if(!ids.includes(V.bill))V.bill=S.scenarios[0]?S.scenarios[0].id:'general';
  const page=V.bill==='general'?generalHTML():V.bill==='seats'?seatPlanHTML():V.bill==='rafts'?raftPageHTML():billHTML(sc(V.bill));
  return `<h2>Station bills</h2>
- <div class="panel"><label class="f" for="bl">Scenario</label><select id="bl" data-act="pickBill">${opt('general','General emergency instructions (all crew)',V.bill)}${opt('seats','Lifeboat seat allocation',V.bill)}${opt('rafts','Liferaft allocation',V.bill)}${S.scenarios.map(s=>opt(s.id,s.name,V.bill)).join('')}</select>
+ <div class="panel"><label class="f" for="bl">Scenario</label><select id="bl" data-act="pickBill">${opt('general','General emergency instructions (all crew)',V.bill)}${opt('seats','Lifeboat seat allocation',V.bill)}${S.scenarios.map(s=>opt(s.id,s.name,V.bill)).join('')}</select>
  <div class="actions"><button class="b p" data-act="printBill">${framed?"Save print file":"Print this list"}</button><button class="b" data-act="printAllBills">Print all lists</button><button class="b" data-act="printEverything">Print everything</button></div>
  <p class="hint">Built live from the crew roster. Ranks without a role appear under "All other crew".</p></div>
- ${pv(page)}${V.bill==='seats'?seatEditor():V.bill==='rafts'?raftEditor():''}`}
+ ${pv(page)}${V.bill==='seats'?seatEditor():''}`}
 function seatEditor(){
- const cap=Math.max(2,+S.boat.capacity||26);let list='';
- for(let n=1;n<=cap;n++){const r=seatOf(n);list+=`<div class="row" style="margin:6px 0"><span class="badge" style="flex:0 0 52px;text-align:center;font-size:15px;color:var(--red)">${n}</span><select data-act="seat" data-n="${n}" aria-label="Seat ${n}">${rankOpts(r?r.id:'','Spare')}</select></div>`}
- return `<div class="panel"><h3>Edit lifeboat</h3><label class="f">Lifeboat name</label><input data-set="boat" data-f="name" value="${esc(S.boat.name)}">
- <div class="row"><div><label class="f">Capacity (persons)</label><input type="number" min="2" max="60" data-set="boat" data-f="capacity" data-re="1" value="${esc(S.boat.capacity)}"></div><div><label class="f">Seats across per row</label><select data-set="boat" data-f="perRow">${[2,3,4,5,6].map(v=>opt(String(v),String(v),String(S.boat.perRow))).join('')}</select></div></div>
- <label class="f">Boarding notes</label><textarea data-set="boat" data-f="notes">${esc(S.boat.notes)}</textarea></div>
- <div class="panel"><h3>Seats</h3><p class="hint">Seat 1 is the coxswain. Choosing a rank moves it from its old seat.</p>${list}
- <div class="actions"><button class="b" data-act="autoSeat">Fill in roster order</button></div></div>`}
+ const ff=isFF(),cap=ff?32:Math.max(2,+S.boat.capacity||26);let list='';
+ for(let n=1;n<=cap;n++){const r=seatOf(n);list+=`<div class="row" style="margin:6px 0"><span class="badge" style="flex:0 0 52px;text-align:center;font-size:15px;color:${sideCol(n)};border:2px solid ${sideCol(n)}">${n}</span><select data-act="seat" data-n="${n}" aria-label="Seat ${n}">${rankOpts(r?r.id:'',spareLbl(n)+(ff&&n===FF.injured?' (reserved)':''))}</select></div>`}
+ return `<div class="panel"><h3>Edit lifeboat</h3>
+ <label class="f">Layout</label><select data-set="boat" data-f="layout">${opt('ff750','Schat-Harding FF750 (32 seats, as ship poster)',S.boat.layout||'')}${opt('grid','Simple grid (set capacity)',S.boat.layout||'')}</select>
+ <label class="f">Lifeboat name</label><input data-set="boat" data-f="name" value="${esc(S.boat.name)}">
+ <label class="f">Specification line</label><input data-set="boat" data-f="spec" value="${esc(S.boat.spec||'')}">
+ ${ff?'':`<div class="row"><div><label class="f">Capacity (persons)</label><input type="number" min="2" max="60" data-set="boat" data-f="capacity" data-re="1" value="${esc(S.boat.capacity)}"></div><div><label class="f">Seats across per row</label><select data-set="boat" data-f="perRow">${[2,3,4,5,6].map(v=>opt(String(v),String(v),String(S.boat.perRow))).join('')}</select></div></div>`}
+ <label class="f">Boarding notes</label><textarea data-set="boat" data-f="notes">${esc(S.boat.notes)}</textarea>
+ <label class="f">Launching procedure</label><textarea data-set="boat" data-f="launch" style="min-height:150px">${esc(S.boat.launch||'')}</textarea></div>
+ <div class="panel"><h3>Seats</h3><p class="hint">${ff?'Green = left as you board (ship stbd, STBD box). Red = right (ship port, PORT box). Seat 5 is the helm. Seat 7 is kept for the injured.':'Seat 1 is the coxswain.'} Choosing a rank moves it from its old seat.</p>${list}
+ <div class="actions"><button class="b" data-act="autoSeat">${ff?'Reset to ship poster':'Fill in roster order'}</button></div></div>`}
 function vRanks(){
  if(V.rankEdit&&rank(V.rankEdit))return vRankEdit(V.rankEdit);
  return `<h2>Crew roster</h2>
@@ -610,10 +648,10 @@ function vRankEdit(rid){
  const r=rank(rid);
  return `<div class="actions"><button class="b" data-act="back">← Crew roster</button><button class="b p" data-act="genCard" data-r="${esc(rid)}">Generate duty cards</button></div>
  <h2>${esc(r.name)} · duties</h2>
- <div class="panel"><div class="row"><label class="f" style="flex:0 0 100%;margin:0">Liferaft (shows on Card A)</label><select data-f="raft" data-r="${esc(rid)}">${opt('A','Auto: from lifeboat seat'+(r.raft==='A'&&effRaft(r)?' ('+raftName(effRaft(r))+')':''),r.raft||'')}${opt('','None',r.raft||'')}${opt('P','Port · '+S.rafts.port,r.raft||'')}${opt('S','Starboard · '+S.rafts.stbd,r.raft||'')}</select></div></div>
+ 
  <div class="panel"><div class="row"><label class="f" style="flex:0 0 100%;margin:0">Lifeboat seat (shows on Card A)</label><select data-act="rankSeat" data-r="${esc(rid)}">${opt('','No seat',String(r.seat||''))}${Array.from({length:Math.max(2,+S.boat.capacity||26)},(_,i)=>i+1).map(n=>{const o=seatOf(n);return opt(String(n),n+(n===1?' · coxswain':'')+(o&&o.id!==rid?' · now '+o.name:''),String(r.seat||''))}).join('')}</select></div></div>
  <p class="hint">Pick a duty from the list or type a new one. New duties are saved to the duty library. Changes save automatically.</p>
- ${datalists(S.scenarios)}
+ ${datalists(S.scenarios)}${locList()}
  ${S.scenarios.map(s=>{
   const items=[];s.teams.forEach((t,ti)=>t.members.forEach((m,mi)=>{if(m.r===rid)items.push({t,ti,m,mi})}));
   const ds=(ti,mi)=>`data-s="${esc(s.id)}" data-t="${ti}" data-m="${mi}"`;
@@ -622,7 +660,7 @@ function vRankEdit(rid){
   return `<div class="panel"><div class="row" style="justify-content:space-between"><h3 style="flex:1">${esc(s.name)}</h3><span class="badge" style="flex:0 0 auto">Card ${s.group}</span></div>
   ${items.length?'':`<p class="hint">No role: prints "${esc(s.unassigned||DISP)}"</p>`}
   ${items.map(({t,ti,m,mi},k)=>`<div class="assign"><div class="row"><select data-act="mvTeam" ${ds(ti,mi)} aria-label="Team">${teamOpts(ti)}</select>${condSel(m,ds(ti,mi))}</div>
-   <div class="hint" style="margin-top:4px">Muster: ${esc(t.muster||s.muster)}</div>
+   <div class="hint" style="margin-top:4px">Team muster: ${esc(t.muster||s.muster)}</div><input list="dlLoc" data-f="mu" ${ds(ti,mi)} value="${esc(m.mu||'')}" placeholder="Own station (optional), overrides team muster on the card" style="margin-top:6px" aria-label="Own station">
    <input list="dl-${esc(s.id)}" value="${esc(m.d)}" data-f="d" ${ds(ti,mi)} placeholder="Choose or type a duty" style="margin-top:6px" aria-label="Duty">
    <div class="row" style="margin-top:6px"><button class="b s d" data-act="delMem" ${ds(ti,mi)} style="flex:0 0 auto">Remove role</button></div></div>`).join('')}
   <div class="row" style="margin-top:8px">${s.teams.length?`<select id="add-${esc(s.id)}" aria-label="Team for new role">${teamOpts(0)}</select><button class="b s" data-act="addRole" data-s="${esc(s.id)}" data-r="${esc(rid)}" style="flex:0 0 auto">+ Add ${items.length?'second ':''}role</button>`:'<p class="hint">This drill has no teams yet. Add one in Drills.</p>'}</div>
@@ -655,7 +693,7 @@ function vScEdit(s){
   <label class="f">Muster station</label><input list="dlLoc" data-f="muster" ${tds} value="${esc(t.muster)}" placeholder="${esc(s.muster)}">
   <label class="f">Team task</label><textarea data-f="task" ${tds}>${esc(t.task)}</textarea>
   <div class="row"><div><label class="f">Leader</label><select data-f="lead" ${tds}>${rankOpts(t.lead,'None')}</select></div><div><label class="f">Alternate leader</label><select data-f="alt" ${tds}>${rankOpts(t.alt,'None')}</select></div></div>
-  ${t.members.map((m,mi)=>{const mds=`${tds} data-m="${mi}"`;return `<div class="mem"><select data-f="r" ${mds} aria-label="Rank">${rankOpts(m.r)}</select>${condSel(m,mds)}<input class="full" list="dl-${esc(s.id)}" data-f="d" ${mds} value="${esc(m.d)}" placeholder="Choose or type a duty" aria-label="Duty"><input data-f="l" ${mds} value="${esc(m.l)}" placeholder="Label, e.g. Duty Officer (optional)" aria-label="Label"><button class="b s d" data-act="delMem" ${mds}>Remove</button></div>`}).join('')}
+  ${t.members.map((m,mi)=>{const mds=`${tds} data-m="${mi}"`;return `<div class="mem"><select data-f="r" ${mds} aria-label="Rank">${rankOpts(m.r)}</select>${condSel(m,mds)}<input class="full" list="dl-${esc(s.id)}" data-f="d" ${mds} value="${esc(m.d)}" placeholder="Choose or type a duty" aria-label="Duty"><input data-f="l" ${mds} value="${esc(m.l)}" placeholder="Label, e.g. Duty Officer (optional)" aria-label="Label"><input class="full" list="dlLoc" data-f="mu" ${mds} value="${esc(m.mu||'')}" placeholder="Own station for this person (optional), e.g. Port bridge wing" aria-label="Own station"><button class="b s d" data-act="delMem" ${mds}>Remove</button></div>`}).join('')}
   <div class="actions"><button class="b s" data-act="addMem" ${tds}>+ Add member</button><button class="b s" data-act="mvTeamPos" ${tds} data-d="-1"${ti?'':' disabled'}>Move up</button><button class="b s d" data-act="delTeam" ${tds}>Delete team</button></div></div>`}).join('')}
  <div class="actions"><button class="b p" data-act="addTeam" ${ds}>+ Add team</button><button class="b d" data-act="delSc" ${ds}>Delete scenario</button></div>`}
 function vSet(){
@@ -663,6 +701,7 @@ function vSet(){
  const q=(V.libQ||'').toLowerCase();const lib=allDuties().filter(d=>!q||d.toLowerCase().includes(q));
  return `<h2>Settings</h2>
  <div class="panel"><h3>Ship</h3><div class="row">${sh('name','Ship name')}${sh('call','Call sign')}</div><div class="row">${sh('port','Port of registry')}${sh('imo','IMO number')}</div><div class="row">${sh('rev','Revision no.')}${sh('approved','Approved by (rank)')}</div></div>
+ <div class="panel"><h3>Liferafts</h3><p class="hint">No fixed liferaft allocation. These locations print on the liferaft station bill.</p><label class="f">Port liferaft</label><input data-set="rafts" data-f="port" value="${esc(S.rafts.port)}"><label class="f">Starboard liferaft</label><input data-set="rafts" data-f="stbd" value="${esc(S.rafts.stbd)}"></div>
  <div class="panel"><h3>Duty cards</h3><label class="f">Card A subtitle</label><input data-set="root" data-f="cardA" value="${esc(S.cardA)}"><p class="hint">Choose which drills go on Card A or B in Drills → Edit → Card group.</p></div>
  <div class="panel"><h3>Alarm signals</h3>
  <label class="f">General emergency alarm · 7 short + 1 long</label><textarea data-set="alarms" data-f="general">${esc(S.alarms.general)}</textarea>
@@ -738,7 +777,7 @@ view.addEventListener('click',e=>{
  case 'printCard':return doPrint(V.card==='both'?[cardHTML(V.rank,'A'),cardHTML(V.rank,'B')]:[cardHTML(V.rank,V.card)],'Duty card '+rn(V.rank));
  case 'printAllCards':return doPrint(allCards(),'All duty cards');
  case 'printBill':return doPrint([V.bill==='general'?generalHTML():V.bill==='seats'?seatPlanHTML():V.bill==='rafts'?raftPageHTML():billHTML(sc(V.bill))],V.bill==='general'?'General emergency instructions':V.bill==='seats'?'Lifeboat seat allocation':V.bill==='rafts'?'Liferaft allocation':'Station bill '+sc(V.bill).name);
- case 'autoSeat':{if(!arm(b))return;let n=2;S.roster.forEach(r=>{r.seat=r.id==='CO'?1:n++});save();return render(true)}
+ case 'autoSeat':{if(!arm(b))return;if(isFF())S.roster.forEach(r=>{r.seat=FF.seats[r.id]||''});else{let n=2;S.roster.forEach(r=>{r.seat=r.id==='CO'?1:n++})}save();return render(true)}
  case 'printAllBills':return doPrint(allBills(),'All station bills');
  case 'printEverything':return doPrint([...allBills(),...allCards()],'Station bills and duty cards');
  case 'editRank':V.tab='ranks';V.rankEdit=ds.r;return render();

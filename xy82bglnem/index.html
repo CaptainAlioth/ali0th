@@ -22,17 +22,17 @@
    LAYOUT: phone first, bottom tabs, preview on top, editors below */
 :root{--sans:Barlow,"Avenir Next","Segoe UI",Roboto,system-ui,sans-serif;--cond:"Barlow Condensed","Avenir Next Condensed","Roboto Condensed","Arial Narrow",sans-serif-condensed,Arial,sans-serif;color-scheme:light dark;--bg:light-dark(#e9ecef,#101317);--card:light-dark(#fff,#1b2026);--ink:light-dark(#14181d,#e8ebee);--mut:light-dark(#5b636d,#9aa3ad);--line:light-dark(#d5d9de,#2e353d);--red:#d42a20;--brand:#005FDC;--navy:#0B2545;--redbg:light-dark(#fdecea,#3a1714);--bar:#0B2545}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
-*{box-sizing:border-box;min-width:0}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);overflow-x:clip;-webkit-text-size-adjust:100%}
-header.top{position:sticky;top:0;z-index:5;background:var(--bar);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px}
-.beta{display:inline-block;font:700 11px/1 var(--sans);letter-spacing:.06em;background:#005FDC;color:#fff;border-radius:4px;padding:3px 6px;margin-left:8px;vertical-align:middle}
-@media(max-width:480px){header.top .sig{display:none}/* Beta watermark and signature (same as Port Watch Log): drawn over the page but never blocks a tap */
+/* Beta watermark and signature (same as Port Watch Log): drawn over the page but never blocks a tap */
 .wmark{position:fixed;inset:0;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .wmark div{transform:rotate(-28deg);text-align:center;color:var(--ink);opacity:.08;user-select:none}
 .wmark b{display:block;font:800 clamp(72px,24vw,190px)/1 var(--sans);letter-spacing:.12em}
 .wmark span{display:block;font:600 clamp(18px,5vw,34px)/1.2 var(--sans);letter-spacing:.08em;margin-top:6px}
 .sigf{text-align:center;font-size:.8rem;color:var(--mut);padding:14px 0 2px}.sigf b{color:var(--brand);font-weight:700}
-header.top h1{font-size:18px}}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);overflow-x:clip;-webkit-text-size-adjust:100%}
+header.top{position:sticky;top:0;z-index:5;background:var(--bar);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px}
+.beta{display:inline-block;font:700 11px/1 var(--sans);letter-spacing:.06em;background:#005FDC;color:#fff;border-radius:4px;padding:3px 6px;margin-left:8px;vertical-align:middle}
+@media(max-width:480px){header.top .sig{display:none}header.top h1{font-size:18px}}
 #lockBtn{flex:none;border:1px solid rgba(255,255,255,.35);background:none;color:#fff;font:600 13px var(--sans);border-radius:6px;padding:6px 10px;min-height:34px}
 header.top h1{font:600 20px/1.1 var(--cond);margin:0;letter-spacing:.2px;flex:1}
 header.top .sub{font-size:13px;color:#aab3bd;display:block;font-weight:400;font-family:var(--sans)}

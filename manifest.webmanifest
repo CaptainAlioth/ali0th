@@ -1,4 +1,5 @@
 {
+  "id": "./index.html",
   "name": "Port Watch Log",
   "short_name": "Watch Log",
   "start_url": "./index.html",

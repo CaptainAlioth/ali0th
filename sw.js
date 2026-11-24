@@ -1,4 +1,4 @@
-var CACHE = 'pwl-v7';
+var CACHE = 'pwl-v8';
 // File names must match the repository exactly (GitHub Pages is case-sensitive).
 var FILES = ['./', './index.html', './cargo-record.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './cargo.webmanifest', './cargo-192.png', './cargo-512.png'];
 self.addEventListener('install', function (e) {

@@ -1,14 +1,12 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Port Watch Log</title>
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#f2b705">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Watch Log">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0b6e79">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
-
+<link rel="icon" href="icon-192.png">
 <style>
   /* Quiet layout: flat tonal panels, few borders, one yellow accent used for fills (day: amber, night: softer gold) with dark text so it reads in both. Red is kept for Commence, Completion and Emergency. */
   :root {
@@ -59,6 +57,8 @@
     font-family: var(--font-body); font-size: 16px; line-height: 1.4;
     margin: 0;
     padding-block: 12px 40px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
@@ -195,6 +195,35 @@
   .crane { font-size: 0.8rem; color: var(--muted); overflow-wrap: anywhere; }
   .del { min-height: 32px; padding: 3px 9px; background: transparent; border: 0; border-radius: 8px; color: var(--muted); font-size: 0.78rem; cursor: pointer; }
   .del.armed, .danger.armed { color: var(--danger); }
+  .logrow { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem; gap: 8px; align-items: stretch; }
+  .logsel { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .logrow .logbtn { width: 100%; min-height: 0; height: auto; font-size: 1.05rem; line-height: 1.15; padding: 4px; }
+  .editing .logrow { display: none; }
+  .cols { display: none; }
+  .editing .cols { display: grid; }
+  .hc2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: end; }
+  .hcell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .row.nowrap { flex-wrap: nowrap; }
+  .dd { position: relative; }
+  .ddbtn { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .ddmenu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; width: max(100%, 230px); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 10px 28px rgb(0 0 0 / 0.25); }
+  .ddlist { display: flex; flex-direction: column; gap: 4px; }
+  .ddopt { text-align: left; min-height: 42px; }
+  .ddmenu .stepper .slabel { flex: 1; }
+  .team { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .tlist { display: flex; flex-direction: column; gap: 6px; }
+  .trow { display: flex; gap: 6px; }
+  .trow input { flex: 1; min-height: 40px; font-size: 16px; }
+  .rmx { width: 40px; flex: none; border: 0; border-radius: 9px; background: var(--chip); color: var(--danger); font-size: 1.1rem; cursor: pointer; }
+  .addp { align-self: flex-start; color: var(--accent-ink); font-weight: 600; }
+  .acts { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .editbox { display: flex; flex-direction: column; gap: 8px; padding: 10px; margin: 6px 0; border: 2px solid var(--accent); border-radius: 10px; background: var(--surface); }
+  .editbox label { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; color: var(--muted); min-width: 0; }
+  .editbox label.einline { flex-direction: row; align-items: center; justify-content: space-between; font-size: 0.92rem; color: var(--fg); }
+  .editbox label.einline .pick { width: 5.5em; }
+  .editbox input, .editbox select { font-size: 16px; color: var(--fg); }
+  .editbox input[type="date"], .editbox input[type="time"], .editbox input[type="text"] { min-height: 40px; padding: 5px 10px; background: var(--chip); border: 1px solid transparent; border-radius: 9px; width: 100%; }
+  .egrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .empty { color: var(--muted); padding: 8px 0; }
 
   .copygrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -212,45 +241,21 @@
   #toast.show { opacity: 1; }
   @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
   @media (max-width: 380px) { .entry { grid-template-columns: 4.2rem 1fr auto; } }
-  .wm { text-align: center; margin: 18px 0 8px; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); opacity: 0.8; }
-  .wm b { color: var(--fg); font-weight: 700; }
-  .betatag { position: fixed; top: env(safe-area-inset-top, 0px); right: 6px; z-index: 5; pointer-events: none; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.16em; color: var(--muted); opacity: 0.7; padding: 2px 4px; }
+
+  /* Beta watermark and signature: drawn over the page but never blocks a tap. */
+  .wmark { position: fixed; inset: 0; z-index: 3; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .wmark div { transform: rotate(-28deg); text-align: center; color: var(--fg); opacity: 0.08; user-select: none; }
+  .wmark b { display: block; font: 800 clamp(72px, 24vw, 190px)/1 var(--font-body); letter-spacing: 0.12em; }
+  .wmark span { display: block; font: 600 clamp(18px, 5vw, 34px)/1.2 var(--font-body); letter-spacing: 0.08em; margin-top: 6px; }
+  .sig { text-align: center; font-size: 0.8rem; color: var(--muted); padding: 6px 0 2px; }
+  .sig b { color: var(--accent-ink); font-weight: 700; }
 </style>
 </head><body>
-<div class="betatag" aria-hidden="true">BETA</div>
 <div class="wrap">
   <div class="mode" role="group" aria-label="Operation">
     <button type="button" id="mLoad" aria-pressed="true">Loading</button>
     <button type="button" id="mDisch" aria-pressed="false">Discharging</button>
   </div>
-
-  <section class="panel" id="composer" aria-label="Events and details">
-    <p class="hint editonly">Rename in the box, move with the arrows, remove with &times;. Add new ones at the bottom of each list. Keep the names Commence, Start, Stop, Finish and Completion so Loading or Discharging and the Stop pairing keep working.</p>
-    <div class="cols">
-      <div class="col">
-        <h2>Events</h2>
-        <select class="pick" id="selA" aria-label="Event"></select>
-        <div class="chips" id="chipsA"></div>
-        <div class="addrow"><input type="text" id="addA" placeholder="New option" aria-label="New option for Events"><button class="small" type="button" data-add="a">Add</button></div>
-      </div>
-      <div class="col">
-        <h2>Details</h2>
-        <select class="pick" id="selB" aria-label="Detail"></select>
-        <div class="chips" id="chipsB"></div>
-        <div class="addrow"><input type="text" id="addB" placeholder="New option" aria-label="New option for Details"><button class="small" type="button" data-add="b">Add</button></div>
-      </div>
-    </div>
-    <input type="text" id="custom" placeholder="Or type your own comment" aria-label="Custom comment" autocomplete="off">
-    <div class="preview" id="preview"></div>
-    <div class="row spread">
-      <label class="check"><input type="checkbox" id="manualOn"> Set time manually</label>
-      <button class="small" id="editToggle" type="button">Edit options</button>
-    </div>
-    <input type="time" id="manualTime" hidden aria-label="Manual time">
-  </section>
-
-  <button class="logbtn" id="log" type="button">LOG NOW</button>
-  <div class="now" id="now"></div>
 
   <section class="panel" aria-label="From and to">
     <h2>From - To (continuous work)</h2>
@@ -269,6 +274,72 @@
     <button class="small primary" id="ftAdd" type="button">Add From - To</button>
   </section>
 
+  <section class="panel" id="composer" aria-label="Log now">
+    <h2>Log now</h2>
+    <p class="hint editonly">Rename in the box, move with the arrows, remove with &times;. Add new ones at the bottom of each list. Keep the names Commence, Start, Stop, Finish and Completion so Loading or Discharging and the Stop pairing keep working.</p>
+    <div class="logrow">
+      <div class="logsel">
+        <select class="pick" id="selA" aria-label="Event"></select>
+        <select class="pick" id="selB" aria-label="Detail"></select>
+      </div>
+      <button class="logbtn" id="log" type="button">LOG<br>NOW</button>
+    </div>
+    <div class="cols">
+      <div class="col">
+        <h2>Events</h2>
+        <div class="chips" id="chipsA"></div>
+        <div class="addrow"><input type="text" id="addA" placeholder="New option" aria-label="New option for Events"><button class="small" type="button" data-add="a">Add</button></div>
+      </div>
+      <div class="col">
+        <h2>Details</h2>
+        <div class="chips" id="chipsB"></div>
+        <div class="addrow"><input type="text" id="addB" placeholder="New option" aria-label="New option for Details"><button class="small" type="button" data-add="b">Add</button></div>
+      </div>
+    </div>
+    <input type="text" id="custom" placeholder="Or type your own comment" aria-label="Custom comment" autocomplete="off">
+    <div class="preview" id="preview"></div>
+    <div class="row spread">
+      <label class="check"><input type="checkbox" id="manualOn"> Set time manually</label>
+      <button class="small" id="editToggle" type="button">Edit options</button>
+    </div>
+    <input type="time" id="manualTime" hidden aria-label="Manual time">
+    <div class="now" id="now"></div>
+  </section>
+
+  <section class="panel" aria-label="Hold, cranes and watch">
+    <h2>Hold, cranes and watch</h2>
+    <p class="hint">Stays on every new log line until you change it.</p>
+    <div class="hc2">
+      <div class="hcell">
+        <div class="sub">Cargo hold</div>
+        <div class="row nowrap"><span class="swatch" id="holdSw"></span><select class="pick" id="holdSel" aria-label="Cargo hold"></select></div>
+      </div>
+      <div class="hcell dd" id="crDD">
+        <div class="sub">Cranes</div>
+        <button type="button" class="pick ddbtn" id="crBtn" aria-haspopup="true" aria-expanded="false">No cranes</button>
+        <div class="ddmenu" id="crMenu" hidden>
+          <div id="shipCr" class="ddlist"></div>
+          <div class="stepper">
+            <span class="slabel">Shore cranes</span>
+            <button id="shMinus" type="button" aria-label="Fewer shore cranes">&minus;</button>
+            <output id="shVal" aria-live="polite">0</output>
+            <button id="shPlus" type="button" aria-label="More shore cranes">+</button>
+          </div>
+          <button type="button" class="small primary" id="crDone">Done</button>
+        </div>
+      </div>
+    </div>
+    <div class="team">
+      <div class="sub">Watchman on duty</div>
+      <div id="wmList" class="tlist"></div>
+      <button type="button" class="small addp" data-addp="wm">+ Add watchman</button>
+      <div class="sub">Officer on duty</div>
+      <div id="offList" class="tlist"></div>
+      <button type="button" class="small addp" data-addp="off">+ Add officer</button>
+      <datalist id="nameList"></datalist>
+    </div>
+  </section>
+
   <section class="panel" aria-label="Log">
     <div class="row spread">
       <h2 id="count">Log</h2>
@@ -277,25 +348,11 @@
     <div class="entries" id="entries"></div>
   </section>
 
-  <section class="panel" aria-label="Hold and cranes">
-    <h2>Hold and cranes</h2>
-    <p class="hint">Stays on every new log line until you change it.</p>
-    <div class="sub">Cargo hold</div>
-    <div class="row"><span class="swatch" id="holdSw"></span><select class="pick" id="holdSel" aria-label="Cargo hold"></select></div>
-    <div class="sub">Ship cranes working</div>
-    <div class="shipcr" id="shipCr"></div>
-    <div class="stepper">
-      <span class="slabel">Shore cranes working</span>
-      <button id="shMinus" type="button" aria-label="Fewer shore cranes">&minus;</button>
-      <output id="shVal" aria-live="polite">0</output>
-      <button id="shPlus" type="button" aria-label="More shore cranes">+</button>
-    </div>
-  </section>
-
   <section class="panel" aria-label="Copy">
     <h2>Copy</h2>
-    <p class="hint">Excel columns: Date, Time, To, Hold, Cranes, Comment. Oldest entry first.</p>
-    <button class="small primary" id="copyAll" type="button">Copy all for Excel</button>
+    <p class="hint">Excel columns: Date, Time, To, Hold, Cranes, Watchman, Officer, Comment. Oldest entry first. The Excel file has an All entries sheet plus one sheet per cargo hold.</p>
+    <button class="small primary" id="dlXlsx" type="button">Download Excel (.xlsx)</button>
+    <button class="small" id="copyAll" type="button">Copy all for Excel</button>
     <button class="small" id="copyLines" type="button">Copy as text lines (08:00 - Start Loading)</button>
     <div class="copygrid">
       <button class="small" id="copyDate" type="button">Dates</button>
@@ -309,8 +366,9 @@
       <textarea id="manualText" readonly></textarea>
     </div>
   </section>
+  <footer class="sig"><b>Beta</b> · by @Ali0th</footer>
 </div>
-<p class="wm"><b>Beta</b> &middot; @Ali0th</p>
+<div class="wmark" aria-hidden="true"><div><b>BETA</b><span>by @Ali0th</span></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -324,7 +382,25 @@
   var OLD_A = ['Emergency', 'Stevedores onboard', 'Stevedores left ship', 'Cargo loading commenced', 'Cargo loading stopped', 'Waiting cargo to resume loading', 'Cargo loading resumed', 'Hatch opened', 'Hatch closed', 'Start Loading', 'Stop Loading', 'Stevedores on', 'Stevedores off', 'Commenced Loading', 'Finished Loading', 'Crane Ready', 'Open Hatch'];
   var OLD_B = ['Breaktime', 'Shift change', 'Rain', 'Waiting for trucks', 'Waiting for cargo', 'Crane breakdown', 'Surveyor onboard', 'Lashing', 'Waiting cargo', 'Airbagging/Shoring', 'Shift Change', 'Rain stopped', 'Cargo Damage', 'Emergency', 'Authority Onboard'];
   var SUFFIX = ['Commence', 'Start', 'Stop', 'Finish'];
-  var FT_PRESETS = ['Crane Preparation', 'Waiting for cargo', 'Breaktime', 'No Operations'];
+  var FT_PRESETS = ['Loading', 'Discharging', 'Opening Hatch', 'Closing Hatch', 'Breaktime', 'Waiting', 'Crane Trouble', 'Raining', 'Repair', 'Securing', 'Unlashing'];
+  var KEY_FT = 'pwl.ftmru.v1';
+  // Quick pick order: most recently used first, the rest in the standard order.
+  function ftOrder() {
+    var used = load(KEY_FT, []);
+    if (!Array.isArray(used)) used = [];
+    used = used.filter(function (x) { return FT_PRESETS.indexOf(x) > -1; });
+    return used.concat(FT_PRESETS.filter(function (x) { return used.indexOf(x) === -1; }));
+  }
+  function ftBump(text) {
+    var hit = null;
+    FT_PRESETS.forEach(function (x) { if (x.toLowerCase() === String(text).toLowerCase()) hit = x; });
+    if (!hit) return;
+    var used = load(KEY_FT, []);
+    if (!Array.isArray(used)) used = [];
+    used = [hit].concat(used.filter(function (x) { return x !== hit; }));
+    save(KEY_FT, used);
+    renderPills();
+  }
   var HUES = [25, 50, 80, 120, 155, 185, 215, 245, 275, 305, 325]; // holds 1 to 11, none near red (red is reserved for alerts)
   var MAX_SHORE = 9;
   var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -359,10 +435,13 @@
     mode: ctx.mode === 'Discharging' ? 'Discharging' : 'Loading',
     hold: (ctx.hold >= 1 && ctx.hold <= 11) ? ctx.hold : null,
     cr: shipCranes(ctx),
-    shore: (ctx.shore >= 0 && ctx.shore <= MAX_SHORE) ? Math.floor(ctx.shore) : 0
+    shore: (ctx.shore >= 0 && ctx.shore <= MAX_SHORE) ? Math.floor(ctx.shore) : 0,
+    wm: names(ctx.wm, true),
+    off: names(ctx.off, true)
   };
   var sel = { a: [], b: [] };
   var editing = false;
+  var editId = null; // log line open for editing
 
   var $ = function (id) { return document.getElementById(id); };
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -376,6 +455,19 @@
     if (Array.isArray(o.cr)) o.cr.forEach(function (n) { n = +n; if (n >= 1 && n <= 4 && out.indexOf(n) === -1) out.push(n); });
     else { if (o.g1) out.push(1); if (o.g2) out.push(2); }
     return out.sort();
+  }
+  // Watchmen and officers on duty: a list of names; the on-screen list always keeps at least one box.
+  function names(a, keepOne) {
+    var out = Array.isArray(a) ? a.map(function (x) { return String(x == null ? '' : x).replace(/[\t\r\n,]+/g, ' ').trim(); }) : [];
+    if (!keepOne) out = out.filter(Boolean);
+    if (keepOne && !out.length) out = [''];
+    return out;
+  }
+  function teamText(o) {
+    var p = [], w = names(o.wm), f = names(o.off);
+    if (w.length) p.push('Watchman: ' + w.join(', '));
+    if (f.length) p.push('Officer: ' + f.join(', '));
+    return p.join(' · ');
   }
   function craneText(o) {
     var p = [], c = shipCranes(o);
@@ -447,11 +539,13 @@
   }
 
   function renderPills() {
-    var s = $('ftSel'); s.textContent = '';
+    var s = $('ftSel'), keep = s.value; s.textContent = '';
     var o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Quick pick'; s.appendChild(o0);
-    ['Continue ' + ctx.mode].concat(FT_PRESETS).forEach(function (label) {
+    ftOrder().forEach(function (label) {
       var o = document.createElement('option'); o.value = label; o.textContent = label; s.appendChild(o);
     });
+    var om = document.createElement('option'); om.value = '__own'; om.textContent = '✎ Type my own comment…'; s.appendChild(om);
+    s.value = keep || '';
   }
 
   function renderCtx() {
@@ -467,7 +561,7 @@
     for (var c = 1; c <= 4; c++) {
       (function (c) {
         var b = document.createElement('button');
-        b.type = 'button'; b.className = 'tog'; b.textContent = 'Crane ' + c;
+        b.type = 'button'; b.className = 'tog ddopt'; b.textContent = 'Ship crane ' + c;
         b.setAttribute('aria-pressed', ctx.cr.indexOf(c) > -1 ? 'true' : 'false');
         b.addEventListener('click', function () {
           var i = ctx.cr.indexOf(c);
@@ -481,12 +575,47 @@
     $('shMinus').disabled = ctx.shore <= 0;
     $('shPlus').disabled = ctx.shore >= MAX_SHORE;
 
+    var ctxt = craneText(ctx);
+    $('crBtn').textContent = ctxt || 'No cranes';
+
     var now = $('now'); now.textContent = '';
     now.appendChild(document.createTextNode('Logging with'));
     now.appendChild(makeBadge(ctx.hold));
-    var ct = craneText(ctx);
-    var s = document.createElement('span'); s.className = 'txt'; s.textContent = ct || 'No cranes';
+    var s = document.createElement('span'); s.className = 'txt'; s.textContent = (ctxt || 'No cranes') + (teamText(ctx) ? ' · ' + teamText(ctx) : '');
     now.appendChild(s);
+  }
+
+  function renderTeam() {
+    ['wm', 'off'].forEach(function (k) {
+      var box = $(k === 'wm' ? 'wmList' : 'offList'); box.textContent = '';
+      ctx[k].forEach(function (v, i) {
+        var r = document.createElement('div'); r.className = 'trow';
+        var inp = document.createElement('input');
+        inp.type = 'text'; inp.value = v; inp.setAttribute('list', 'nameList'); inp.autocomplete = 'off';
+        inp.placeholder = k === 'wm' ? 'Watchman name' : 'Officer name';
+        inp.setAttribute('aria-label', (k === 'wm' ? 'Watchman ' : 'Officer ') + (i + 1));
+        inp.addEventListener('input', function () { ctx[k][i] = inp.value; save(KEY_C, ctx); renderCtx(); });
+        inp.addEventListener('change', function () { ctx[k][i] = clean(inp.value); inp.value = ctx[k][i]; save(KEY_C, ctx); renderCtx(); renderNames(); });
+        r.appendChild(inp);
+        if (ctx[k].length > 1 || v) {
+          var x = document.createElement('button'); x.type = 'button'; x.className = 'rmx'; x.textContent = '×';
+          x.setAttribute('aria-label', 'Remove');
+          x.addEventListener('click', function () {
+            ctx[k].splice(i, 1); if (!ctx[k].length) ctx[k] = [''];
+            save(KEY_C, ctx); renderTeam(); renderCtx();
+          });
+          r.appendChild(x);
+        }
+        box.appendChild(r);
+      });
+    });
+  }
+  // Names used before, offered as suggestions while typing.
+  function renderNames() {
+    var seen = {}, list = [];
+    entries.concat([ctx]).forEach(function (e) { names(e.wm).concat(names(e.off)).forEach(function (n) { if (!seen[n]) { seen[n] = 1; list.push(n); } }); });
+    var dl = $('nameList'); dl.textContent = '';
+    list.forEach(function (n) { var o = document.createElement('option'); o.value = n; dl.appendChild(o); });
   }
 
   function composed() {
@@ -572,13 +701,14 @@
       box.appendChild(e); return;
     }
     // The hold and crane details are shown on a line only when they change, so the log stays quiet.
-    var lastDate = '', prevHold = null, prevCt = '';
+    var lastDate = '', prevHold = null, prevCt = '', prevTm = '';
     sorted().forEach(function (en) {
       var dk = fmtDate(en.ts);
       if (dk !== lastDate) {
         var dg = document.createElement('div'); dg.className = 'dategroup'; dg.textContent = dk;
-        box.appendChild(dg); lastDate = dk; prevHold = null; prevCt = '';
+        box.appendChild(dg); lastDate = dk; prevHold = null; prevCt = ''; prevTm = '';
       }
+      if (en.id === editId) { box.appendChild(editRow(en)); prevHold = undefined; prevCt = undefined; prevTm = undefined; return; }
       var row = document.createElement('div');
       var isEm = RE_EMERG.test(en.text || '');
       row.className = 'entry' + (en.hold ? ' has-hold' : '') + (isEm ? ' emergency' : '');
@@ -609,15 +739,79 @@
       } else c.textContent = 'No comment';
       body.appendChild(c);
       if (ct !== prevCt) { var cr = document.createElement('div'); cr.className = 'crane'; cr.textContent = ct || 'No cranes'; body.appendChild(cr); }
-      prevHold = curHold; prevCt = ct;
+      var tm = teamText(en);
+      if (tm && tm !== prevTm) { var tmd = document.createElement('div'); tmd.className = 'crane'; tmd.textContent = tm; body.appendChild(tmd); }
+      prevHold = curHold; prevCt = ct; prevTm = tm;
+      var acts = document.createElement('div'); acts.className = 'acts';
+      var ed = document.createElement('button'); ed.type = 'button'; ed.className = 'del'; ed.textContent = 'Edit';
+      ed.addEventListener('click', function () { editId = en.id; renderEntries(); var f = document.getElementById('eText'); if (f) f.closest('.editbox').scrollIntoView({ block: 'nearest' }); });
       var del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = 'Delete';
       arm(del, 'Delete', 'Tap again', function () {
         entries = entries.filter(function (x) { return x.id !== en.id && x.pairId !== en.id; });
         save(KEY_E, entries); renderEntries();
       });
-      row.appendChild(w); row.appendChild(body); row.appendChild(del);
+      acts.appendChild(ed); acts.appendChild(del);
+      row.appendChild(w); row.appendChild(body); row.appendChild(acts);
       box.appendChild(row);
     });
+  }
+
+  // Edit form for one log line: date, time, To time, hold, cranes and comment.
+  function hesc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]; }); }
+  function isoDate(ts) { var d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function editRow(en) {
+    var cr = shipCranes(en), box = document.createElement('div');
+    box.className = 'editbox';
+    var holdOpts = '<option value="">No hold</option>';
+    for (var n = 1; n <= 11; n++) holdOpts += '<option value="' + n + '"' + (en.hold === n ? ' selected' : '') + '>Hold ' + n + '</option>';
+    var shoreOpts = '';
+    for (var s = 0; s <= MAX_SHORE; s++) shoreOpts += '<option value="' + s + '"' + ((en.shore || 0) === s ? ' selected' : '') + '>' + s + '</option>';
+    var crBtns = '';
+    for (var c = 1; c <= 4; c++) crBtns += '<button type="button" class="tog" data-ecr="' + c + '" aria-pressed="' + (cr.indexOf(c) > -1) + '">Crane ' + c + '</button>';
+    box.innerHTML =
+      '<div class="sub">Edit entry</div>' +
+      '<div class="egrid">' +
+        '<label>Date<input type="date" id="eDate" value="' + isoDate(en.ts) + '"></label>' +
+        '<label>Time<input type="time" id="eTime" value="' + fmtTime(en.ts) + '"></label>' +
+        (en.to ? '<label>To<input type="time" id="eTo" value="' + fmtTime(en.to) + '"></label>' : '') +
+        '<label>Hold<select class="pick" id="eHold">' + holdOpts + '</select></label>' +
+      '</div>' +
+      '<div class="sub">Ship cranes</div><div class="shipcr">' + crBtns + '</div>' +
+      '<label class="einline">Shore cranes<select class="pick" id="eShore">' + shoreOpts + '</select></label>' +
+      '<label class="eblock">Watchman on duty (comma between names)<input type="text" id="eWm" value="' + hesc(names(en.wm).join(', ')) + '" list="nameList" autocomplete="off"></label>' +
+      '<label class="eblock">Officer on duty (comma between names)<input type="text" id="eOff" value="' + hesc(names(en.off).join(', ')) + '" list="nameList" autocomplete="off"></label>' +
+      '<label class="eblock">Comment<input type="text" id="eText" value="' + hesc(en.text) + '" autocomplete="off"></label>' +
+      '<div class="row"><button type="button" class="small primary" id="eSave">Save changes</button><button type="button" class="small" id="eCancel">Cancel</button></div>';
+    Array.prototype.forEach.call(box.querySelectorAll('[data-ecr]'), function (b) {
+      b.addEventListener('click', function () { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); });
+    });
+    box.querySelector('#eCancel').addEventListener('click', function () { editId = null; renderEntries(); });
+    box.querySelector('#eSave').addEventListener('click', function () {
+      var dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(box.querySelector('#eDate').value), tm = /^(\d{1,2}):(\d{2})/.exec(box.querySelector('#eTime').value);
+      if (!dm || !tm) { toast('Set the date and time'); return; }
+      var ts = new Date(+dm[1], +dm[2] - 1, +dm[3], +tm[1], +tm[2], 0, 0).getTime();
+      var to = null, toEl = box.querySelector('#eTo');
+      if (toEl) {
+        var tt = /^(\d{1,2}):(\d{2})/.exec(toEl.value);
+        if (!tt) { toast('Set the To time'); return; }
+        var td = new Date(ts); td.setHours(+tt[1], +tt[2], 0, 0);
+        if (td.getTime() < ts) td.setDate(td.getDate() + 1); // To earlier than From means it ran past midnight
+        to = td.getTime();
+      }
+      var picked = [];
+      Array.prototype.forEach.call(box.querySelectorAll('[data-ecr]'), function (b) { if (b.getAttribute('aria-pressed') === 'true') picked.push(+b.getAttribute('data-ecr')); });
+      var hv = box.querySelector('#eHold').value;
+      en.ts = ts; if (toEl) en.to = to;
+      en.hold = hv ? parseInt(hv, 10) : null;
+      en.cr = picked.sort(); delete en.g1; delete en.g2;
+      en.shore = parseInt(box.querySelector('#eShore').value, 10) || 0;
+      en.text = clean(box.querySelector('#eText').value);
+      en.wm = names(box.querySelector('#eWm').value.split(','));
+      en.off = names(box.querySelector('#eOff').value.split(','));
+      editId = null; save(KEY_E, entries); renderEntries(); toast('Entry updated');
+    });
+    box.querySelector('#eText').addEventListener('keydown', function (e) { if (e.key === 'Enter') box.querySelector('#eSave').click(); });
+    return box;
   }
 
   // The latest Start or Commence that has not been closed by a Stop, up to the given time.
@@ -638,13 +832,13 @@
       if (isNaN(ts)) { toast('Set the time first'); return; }
     }
     var wasStop = sel.a.indexOf('Stop') > -1;
-    var en = { id: newId(ts), ts: ts, text: composed(), hold: ctx.hold, cr: ctx.cr.slice(), shore: ctx.shore, seq: nextSeq() };
+    var en = { id: newId(ts), ts: ts, text: composed(), hold: ctx.hold, cr: ctx.cr.slice(), shore: ctx.shore, wm: names(ctx.wm), off: names(ctx.off), seq: nextSeq() };
     entries.push(en);
     var msg = 'Logged ' + fmtTime(ts);
     if (wasStop) {
       var open = findOpenStart(ts, en.id);
       if (open) {
-        entries.push({ id: newId(open.ts), ts: open.ts, to: ts, text: 'Continue ' + ctx.mode, hold: open.hold, cr: shipCranes(open), shore: open.shore, seq: nextSeq(), pairId: en.id });
+        entries.push({ id: newId(open.ts), ts: open.ts, to: ts, text: 'Continue ' + ctx.mode, hold: open.hold, cr: shipCranes(open), shore: open.shore, wm: names(open.wm), off: names(open.off), seq: nextSeq(), pairId: en.id });
         msg += ' and Continue ' + fmtTime(open.ts) + '-' + fmtTime(ts);
       }
     }
@@ -660,7 +854,8 @@
     if (isNaN(f) || isNaN(t)) { toast('Set both From and To'); return; }
     if (t < f) { toast('To is earlier than From'); return; }
     var text = clean($('ftText').value) || ('Continue ' + ctx.mode);
-    entries.push({ id: newId(f), ts: f, to: t, text: text, hold: ctx.hold, cr: ctx.cr.slice(), shore: ctx.shore, seq: nextSeq() });
+    ftBump(text);
+    entries.push({ id: newId(f), ts: f, to: t, text: text, hold: ctx.hold, cr: ctx.cr.slice(), shore: ctx.shore, wm: names(ctx.wm), off: names(ctx.off), seq: nextSeq() });
     save(KEY_E, entries);
     $('ftFrom').value = $('ftTo').value; $('ftTo').value = ''; $('ftText').value = ''; $('ftSel').value = '';
     renderEntries();
@@ -701,11 +896,32 @@
     });
   });
   $('holdSel').addEventListener('change', function () { ctx.hold = this.value ? parseInt(this.value, 10) : null; save(KEY_C, ctx); renderCtx(); });
-  $('ftSel').addEventListener('change', function () { if (this.value) $('ftText').value = this.value; });
-  $('ftText').addEventListener('input', function () { var s = $('ftSel'); if (s.value !== this.value) s.value = ''; });
+  // The Quick pick keeps showing the chosen option (Android marks it with the blue dot) until the From - To is added.
+  $('ftSel').addEventListener('change', function () {
+    if (this.value === '__own') { $('ftText').value = ''; $('ftText').focus(); }
+    else if (this.value) $('ftText').value = this.value;
+  });
+  $('ftText').addEventListener('input', function () { syncFtSel(); });
+  function syncFtSel() {
+    var v = clean($('ftText').value), s = $('ftSel'), hit = '';
+    FT_PRESETS.forEach(function (x) { if (x.toLowerCase() === v.toLowerCase()) hit = x; });
+    s.value = hit || (v ? '__own' : (s.value === '__own' ? '__own' : ''));
+  }
   $('mLoad').addEventListener('click', function () { ctx.mode = 'Loading'; save(KEY_C, ctx); renderMode(); });
   $('mDisch').addEventListener('click', function () { ctx.mode = 'Discharging'; save(KEY_C, ctx); renderMode(); });
   $('log').addEventListener('click', doLog);
+  function crOpen(on) { $('crMenu').hidden = !on; $('crBtn').setAttribute('aria-expanded', on ? 'true' : 'false'); }
+  $('crBtn').addEventListener('click', function () { crOpen($('crMenu').hidden); });
+  $('crDone').addEventListener('click', function () { crOpen(false); });
+  // Close the crane menu on a tap outside it (a tapped crane is redrawn, so ignore taps on removed elements).
+  document.addEventListener('click', function (e) { if (!$('crMenu').hidden && document.body.contains(e.target) && !e.target.closest('#crDD')) crOpen(false); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-addp]'), function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-addp');
+      ctx[k].push(''); save(KEY_C, ctx); renderTeam();
+      var ins = $(k === 'wm' ? 'wmList' : 'offList').querySelectorAll('input'); ins[ins.length - 1].focus();
+    });
+  });
   $('ftAdd').addEventListener('click', doRange);
   $('custom').addEventListener('input', renderPreview);
   $('custom').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLog(); });
@@ -734,8 +950,8 @@
   arm($('clear'), 'Clear all', 'Tap again to clear', function () { entries = []; save(KEY_E, entries); renderEntries(); toast('Log cleared'); });
 
   $('copyAll').addEventListener('click', function () {
-    var rows = ['Date\tTime\tTo\tHold\tCranes\tComment'].concat(sorted().map(function (e) {
-      return fmtDate(e.ts) + '\t' + fmtTime(e.ts) + '\t' + (e.to ? fmtTime(e.to) : '') + '\t' + (e.hold || '') + '\t' + craneText(e) + '\t' + clean(e.text);
+    var rows = ['Date\tTime\tTo\tHold\tCranes\tWatchman\tOfficer\tComment'].concat(sorted().map(function (e) {
+      return fmtDate(e.ts) + '\t' + fmtTime(e.ts) + '\t' + (e.to ? fmtTime(e.to) : '') + '\t' + (e.hold || '') + '\t' + craneText(e) + '\t' + names(e.wm).join(', ') + '\t' + names(e.off).join(', ') + '\t' + clean(e.text);
     }));
     copyText(rows.join('\n'), 'all entries');
   });
@@ -746,12 +962,113 @@
   $('copyCrane').addEventListener('click', function () { copyText(col(function (e) { return craneText(e); }), 'cranes'); });
   $('copyText').addEventListener('click', function () { copyText(col(function (e) { return clean(e.text); }), 'comments'); });
 
-  renderCtx(); renderChips(); renderEntries(); renderMode();
+  // ---- Excel download: the .xlsx file is built inside the page, so it works offline. ----
+  var dlCap = null;
+  var enc = new TextEncoder();
+  var CRC = (function () { var t = new Uint32Array(256); for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { var c = 0xFFFFFFFF; for (var i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zip(files) {
+    var parts = [], cd = [], off = 0, d = new Date();
+    var dt = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), dd = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    files.forEach(function (f) {
+      var nm = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data);
+      var h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(10, dt, true); h.setUint16(12, dd, true);
+      h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nm.length, true);
+      parts.push(new Uint8Array(h.buffer), nm, data);
+      var c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(12, dt, true); c.setUint16(14, dd, true);
+      c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+      cd.push(new Uint8Array(c.buffer), nm);
+      off += 30 + nm.length + data.length;
+    });
+    var cdSize = cd.reduce(function (s, a) { return s + a.length; }, 0), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdSize, true); e.setUint32(16, off, true);
+    return new Blob(parts.concat(cd, [new Uint8Array(e.buffer)]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  function xesc(s) { return String(s).replace(/[<>&"]/g, function (m) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[m]; }).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ''); }
+  function colL(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  function sheetXml(rows, widths) {
+    var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+      '<cols>' + widths.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>';
+    rows.forEach(function (row, ri) {
+      x += '<row r="' + (ri + 1) + '">';
+      row.forEach(function (cell, ci) {
+        var o = (cell && typeof cell === 'object') ? cell : { v: cell };
+        if (o.v == null || o.v === '') return;
+        var ref = colL(ci) + (ri + 1), st = o.s ? ' s="' + o.s + '"' : '';
+        if (typeof o.v === 'number') x += '<c r="' + ref + '"' + st + '><v>' + o.v + '</v></c>';
+        else x += '<c r="' + ref + '"' + st + ' t="inlineStr"><is><t xml:space="preserve">' + xesc(o.v) + '</t></is></c>';
+      });
+      x += '</row>';
+    });
+    return x + '</sheetData></worksheet>';
+  }
+  var STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFC62828"/><name val="Calibri"/></font></fonts>' +
+    '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFFFE08A"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3">' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+    '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' +
+    '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+    '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  // One sheet with every entry, then one sheet per cargo hold (and "No hold" for lines without one).
+  function buildXlsx() {
+    var head = ['Date', 'Time', 'To', 'Hold', 'Cranes', 'Watchman', 'Officer', 'Comment'].map(function (v) { return { v: v, s: 1 }; });
+    function line(e) {
+      var tx = clean(e.text), red = tx.split(', ').some(function (p) { return flagOf(p); });
+      return [fmtDate(e.ts), fmtTime(e.ts), e.to ? fmtTime(e.to) : '', e.hold || '', craneText(e), names(e.wm).join(', '), names(e.off).join(', '), red ? { v: tx, s: 2 } : tx];
+    }
+    var all = sorted(), sheets = [{ name: 'All entries', rows: [head].concat(all.map(line)) }];
+    for (var n = 1; n <= 11; n++) {
+      var hs = all.filter(function (e) { return e.hold === n; });
+      if (hs.length) sheets.push({ name: 'Hold ' + n, rows: [head].concat(hs.map(line)) });
+    }
+    var none = all.filter(function (e) { return !e.hold; });
+    if (none.length && none.length < all.length) sheets.push({ name: 'No hold', rows: [head].concat(none.map(line)) });
+    var W = [13, 7, 7, 6, 26, 20, 20, 48];
+    var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      sheets.map(function (_, i) { return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+    var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    var wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+      sheets.map(function (sh, i) { return '<sheet name="' + sh.name + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets></workbook>';
+    var wbr = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      sheets.map(function (_, i) { return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') +
+      '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    var files = [
+      { name: '[Content_Types].xml', data: ct }, { name: '_rels/.rels', data: rels },
+      { name: 'xl/workbook.xml', data: wb }, { name: 'xl/_rels/workbook.xml.rels', data: wbr },
+      { name: 'xl/styles.xml', data: STYLES }
+    ];
+    sheets.forEach(function (sh, i) { files.push({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: sheetXml(sh.rows, W) }); });
+    return zip(files);
+  }
+  $('dlXlsx').addEventListener('click', function () {
+    if (!entries.length) { toast('Nothing to export yet'); return; }
+    var d = new Date(), name = 'Port_Watch_Log_' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + '.xlsx';
+    var blob = buildXlsx();
+    if (dlCap) {
+      dlCap.save({ filename: name, data: blob }).then(function () { toast('Excel file saved'); }, function (err) {
+        if (err && err.code === 'declined') return;
+        toast('Download not available here. Use Copy all for Excel');
+      });
+      return;
+    }
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    toast('Excel file downloaded');
+  });
+  try { if (window.claude && typeof window.claude.use === 'function') window.claude.use('downloads').then(function (x) { dlCap = x; }, function () {}); } catch (e) {}
+  try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(function () {}); } catch (e) {}
+
+  renderCtx(); renderTeam(); renderNames(); renderChips(); renderEntries(); renderMode();
 })();
-</script>
-<script>
-if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
-}
 </script>
 </body></html>

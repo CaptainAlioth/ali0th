@@ -67,6 +67,15 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 .pvw{overflow:hidden;margin:0 0 12px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 18px rgba(0,0,0,.08)}
 .pvs{transform-origin:0 0;width:210mm}
 #view .pvw [data-seat]{cursor:pointer}#view .pvw [data-seat].sel .sbox{stroke:#1f6feb!important;stroke-width:7!important;fill:#fff3b0!important}#view .pvw [data-seat].tgt .sbox{stroke-dasharray:8 5}
+#view .pvw.edit{overflow-x:auto;height:auto}#view .pvw.edit [contenteditable]{outline:1px dashed #8db5ef;outline-offset:1px;border-radius:2px;cursor:text;min-height:1em}#view .pvw.edit [contenteditable]:focus{outline:2px solid #005FDC;background:#fffbe3}
+#sugg{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;position:absolute;z-index:30;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:260px;overflow-y:auto;font:15px/1.35 var(--sans);display:none}
+#sugg .sh{position:sticky;top:0;background:var(--card);font-size:12px;color:var(--mut);padding:6px 10px;border-bottom:1px solid var(--line)}
+#sugg .it{padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer}#sugg .it:last-child{border-bottom:0}
+#sugg .it.on,#sugg .it:hover{background:#e6effc}#sugg .it b{color:#005FDC}#sugg .it small{display:block;color:var(--mut);font-size:11px}
+#dlg{position:fixed;inset:0;z-index:50;background:rgba(11,37,69,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+#dlg .box{background:var(--card);color:var(--ink);border-radius:14px;max-width:440px;width:100%;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+#dlg .box h3{margin:0 0 6px}#dlg .q{font-size:14px;color:var(--mut);margin:0 0 12px}#dlg .dd{font-size:14px;background:var(--bg);border-radius:8px;padding:8px 10px;margin:6px 0}
+#dlg .opts{display:grid;gap:8px;margin-top:12px}#dlg .opts button{text-align:left}#dlg .opts small{display:block;font-weight:400;color:var(--mut);font-size:12px}
 #print{position:absolute;left:-10000px;top:0;width:210mm}
 
 /* ---------- PAPER ---------- */
@@ -197,6 +206,7 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
  <button data-tab="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>Settings</button>
 </nav>
 <div id="print"></div>
+<div id="sugg" role="listbox" aria-label="Duty suggestions"></div>
 <script>
 {
 /* ================= SEED DATA (from DUTIES & RESPONSIBILITIES 24 CREW with OSMC) ================= */
@@ -477,17 +487,19 @@ function fitCard(el){
  if(!over())return true;el.classList.add('f1');if(!over())return true;el.classList.add('f2');if(!over())return true;el.classList.add('f3');if(!over())return true;el.classList.add('f4');return !over()}
 
 /* ================= STATION BILLS ================= */
-function teamRows(t){
+let ED=false;
+const ce=a=>ED?` contenteditable="plaintext-only" spellcheck="false" ${a}`:'';
+function teamRows(t,sid,ti){
  const rows=[],seen={};
- t.members.forEach(m=>{
+ t.members.forEach((m,mi)=>{
   const key=m.l?('L|'+m.l+'|'+m.d+'|'+m.c):('R|'+m.r+'|'+m.d+'|'+m.c);
-  if(m.l&&seen[key]){seen[key].ranks.push(m.r);return}
-  const row={m,ranks:[m.r]};if(m.l)seen[key]=row;rows.push(row)});
- return rows.map(({m,ranks})=>{
+  if(m.l&&seen[key]){seen[key].ranks.push(m.r);seen[key].idx.push(mi);return}
+  const row={m,ranks:[m.r],idx:[mi]};if(m.l)seen[key]=row;rows.push(row)});
+ return rows.map(({m,ranks,idx})=>{
   const lead=!m.l&&m.r===t.lead;
   let pos=(m.mu?'':'')+(m.l?`${esc(m.l)}<span class="rs">${ranks.map(rn).map(esc).join(', ')}${m.c?' · '+(m.c==='on'?'on watch':'off watch'):''}</span>`:esc(rn(m.r))+(m.c?`<span class="rs">${m.c==='on'?'If on watch':'If off watch'}</span>`:''))+(m.mu?`<span class="rs" style="font-weight:700;color:#111">${esc(m.mu)}</span>`:'');
   if(lead&&t.alt)pos+=`<span class="alt">Alt: ${esc(rn(t.alt))}</span>`;
-  return `<tr><td class="${lead?'ld':''}">${pos}</td><td class="${lead?'ld':''}">${esc(m.d)}</td></tr>`}).join('')}
+  return `<tr><td class="${lead?'ld':''}">${pos}</td><td class="${lead?'ld':''}"${ce(`data-ef="duty" data-es="${esc(sid)}" data-et="${ti}" data-em="${idx.join(',')}"`)}>${esc(m.d)}</td></tr>`}).join('')}
 function billHTML(s){
  const kinds=[s.alarm==='fire'?'fire':'general'];if(s.mobAlarm)kinds.push('mob');
  const assigned=new Set();s.teams.forEach(t=>t.members.forEach(m=>assigned.add(m.r)));
@@ -496,27 +508,27 @@ function billHTML(s){
  const eq=S.equipment;
  return `<div class="a4 bill${S.betaPrint===false?'':' wm'}">
  <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">STATION BILL · MUSTER LIST</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
- <div class="band">${esc(s.title||s.name)}</div>
+ <div class="band"${ce(`data-ef="title" data-es="${esc(s.id)}"`)}>${esc(s.title||s.name)}</div>
  ${alarmBlock(kinds,s.alarmText)}
- <div class="mbig"><div class="l">Muster<br>station</div><div class="v">${esc(s.muster)}${s.alarm==='fire'?'<div style="font:500 9.5pt var(--sans);text-transform:none">Fire teams proceed to their fire stations</div>':''}</div></div>
+ <div class="mbig"><div class="l">Muster<br>station</div><div class="v"><span${ce(`data-ef="muster" data-es="${esc(s.id)}"`)}>${esc(s.muster)}</span>${s.alarm==='fire'?'<div style="font:500 9.5pt var(--sans);text-transform:none">Fire teams proceed to their fire stations</div>':''}</div></div>
  ${s.fireStations?`<div class="meta">${fs.map(f=>`<div><b>${esc(f.split(':')[0])}:</b> ${esc(f.split(':').slice(1).join(':'))}</div>`).join('')}</div>`:''}
  ${/liferaft/i.test(s.name+' '+s.title)?`<div class="meta"><div><b>Liferafts:</b> ${esc(S.rafts.port)} · ${esc(S.rafts.stbd)} · no fixed allocation, crew board as directed by the officer in charge</div></div>`:''}
- ${s.immediate?`<div class="imm"><b>IMMEDIATE ACTION:</b> ${esc(s.immediate)}</div>`:''}
- ${s.teams.map(t=>`<div class="tb"><div class="tbh">${esc(t.name)}<span><span class="tm2">${esc(shortLoc(t.muster||s.muster))}</span>${t.lead?' Leader: '+esc(rn(t.lead)):''}</span></div>${t.task?`<div class="tbt">${esc(t.task)}</div>`:''}<table class="dt"><tr><th>Position</th><th>Duties</th></tr>${teamRows(t)}</table></div>`).join('')}
- <div class="un"><b>ALL OTHER CREW:</b> ${un.length?un.map(r=>esc(r.name)).join(', ')+' — ':''}${esc(s.unassigned||DISP)}</div>
- ${s.instructions?`<div class="ins"><h5>Instructions</h5>${esc(s.instructions)}</div>`:''}
- ${s.equipment?`<div class="ins"><h5>Location of equipment</h5><table class="eq"><tr>${eq.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${eq.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>`:''}
- <div class="foot">${esc(s.footer||GEN_FOOT)}</div><div class="byline" style="text-align:right;margin-top:1mm">by @Ali0th</div></div>`}
+ ${s.immediate?`<div class="imm"><b>IMMEDIATE ACTION:</b> <span${ce(`data-ef="immediate" data-es="${esc(s.id)}"`)}>${esc(s.immediate)}</span></div>`:''}
+ ${s.teams.map((t,ti)=>`<div class="tb"><div class="tbh"><span${ce(`data-ef="tname" data-es="${esc(s.id)}" data-et="${ti}"`)}>${esc(t.name)}</span><span><span class="tm2">${esc(shortLoc(t.muster||s.muster))}</span>${t.lead?' Leader: '+esc(rn(t.lead)):''}</span></div>${t.task||ED?`<div class="tbt"${ce(`data-ef="task" data-es="${esc(s.id)}" data-et="${ti}"`)}>${esc(t.task)}</div>`:''}<table class="dt"><tr><th>Position</th><th>Duties</th></tr>${teamRows(t,s.id,ti)}</table></div>`).join('')}
+ <div class="un"><b>ALL OTHER CREW:</b> ${un.length?un.map(r=>esc(r.name)).join(', ')+' — ':''}<span${ce(`data-ef="unassigned" data-es="${esc(s.id)}"`)}>${esc(s.unassigned||DISP)}</span></div>
+ ${s.instructions||ED?`<div class="ins"><h5>Instructions</h5><div${ce(`data-ef="instructions" data-es="${esc(s.id)}"`)}>${esc(s.instructions)}</div></div>`:''}
+ ${s.equipment?`<div class="ins"><h5>Location of equipment</h5><table class="eq"><tr>${eq.head.map((h,i)=>`<th${ce(`data-ef="eqh" data-ei="${i}"`)}>${esc(h)}</th>`).join('')}</tr>${eq.rows.map((r,ri)=>`<tr>${r.map((c,ci)=>`<td${ce(`data-ef="eqc" data-ei="${ri}" data-ec="${ci}"`)}>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>`:''}
+ <div class="foot"${ce(`data-ef="footer" data-es="${esc(s.id)}"`)}>${esc(s.footer||GEN_FOOT)}</div><div class="byline" style="text-align:right;margin-top:1mm">by @Ali0th</div></div>`}
 function generalHTML(){
  const fs=S.locations.filter(l=>/^fire station/i.test(l));
  return `<div class="a4 bill${S.betaPrint===false?'':' wm'}">
  <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">SOLAS CH. III REG. 8 AND 37</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
  <div class="band">General emergency instructions</div>
  ${alarmBlock(['general','fire','mob'])}
- <div class="ins"><h5>On hearing the alarm</h5>${esc(S.general)}</div>
+ <div class="ins"><h5>On hearing the alarm</h5><div${ce('data-ef="general"')}>${esc(S.general)}</div></div>
  <div class="ins"><h5>Fire stations</h5>${fs.map(esc).join('\n')}</div>
  <div class="tb"><table class="dt"><tr><th>Emergency</th><th>Alarm · muster / assembly</th></tr>${S.scenarios.map(s=>`<tr><td class="ld">${esc(s.name)}</td><td>${s.alarm==='fire'?'Fire alarm':'General alarm'}${s.mobAlarm?' (+ 3 long)':''} · ${esc(s.muster)}</td></tr>`).join('')}</table></div>
- <div class="ins"><h5>Location of equipment</h5><table class="eq"><tr>${S.equipment.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${S.equipment.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>
+ <div class="ins"><h5>Location of equipment</h5><table class="eq"><tr>${S.equipment.head.map((h,i)=>`<th${ce(`data-ef="eqh" data-ei="${i}"`)}>${esc(h)}</th>`).join('')}</tr>${S.equipment.rows.map((r,ri)=>`<tr>${r.map((c,ci)=>`<td${ce(`data-ef="eqc" data-ei="${ri}" data-ec="${ci}"`)}>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>
  <div class="foot">Approved by ${esc(S.ship.approved)} · Duty cards in each cabin show individual duties by rank</div><div class="byline" style="text-align:right;margin-top:1mm">by @Ali0th</div></div>`}
 
 /* ================= LIFEBOAT SEAT PLAN ================= */
@@ -570,7 +582,7 @@ function seatPlanHTML(){
  ${S.boat.spec?`<div class="ids" style="text-align:center;margin-top:1mm">${esc(S.boat.spec)}</div>`:''}
  <div class="sp"><div>${boatSvg()}<div class="ids" style="text-align:center">Bow at top, entrance at the bottom, as you board. The boat faces aft: green seats are on the ship's starboard side, red seats on the ship's port side.</div></div>
  <div><table class="st"><colgroup><col style="width:9mm"><col><col style="width:14mm"></colgroup><tr><th>Seat</th><th>Rank</th><th>Side</th></tr>${rows}</table>${none.length?`<p class="ids"><b>No seat:</b> ${none.map(r=>esc(r.name)).join(', ')}</p>`:''}</div></div>
- <div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm">${S.boat.notes?`<div class="ins"><h5>Boarding</h5>${esc(S.boat.notes)}</div>`:''}${S.boat.launch?`<div class="ins"><h5>Launching procedure</h5>${esc(S.boat.launch)}</div>`:''}</div>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm">${S.boat.notes||ED?`<div class="ins"><h5>Boarding</h5><div${ce('data-ef="bnotes"')}>${esc(S.boat.notes)}</div></div>`:''}${S.boat.launch||ED?`<div class="ins"><h5>Launching procedure</h5><div${ce('data-ef="blaunch"')}>${esc(S.boat.launch)}</div></div>`:''}</div>
  <div class="foot">Each crew member's seat number is shown on Emergency Duty Card A</div><div class="byline" style="text-align:right;margin-top:1mm">by @Ali0th</div></div>`}
 function raftPageHTML(){
  const col=v=>{const L=S.roster.filter(r=>effRaft(r)===v);return `<div class="bx ${v}"><h4>${v==='P'?'Port':'Starboard'} liferaft</h4><div class="loc">${esc(raftLoc(v))} · ${L.length} crew</div><ol>${L.map(r=>`<li>${esc(r.name)}${r.seat?` <span style="color:#666;font-size:9pt">· lifeboat seat ${esc(r.seat)}</span>`:''}</li>`).join('')||'<li>None</li>'}</ol></div>`};
@@ -592,7 +604,7 @@ function assignSeat(rid,n){S.roster.forEach(r=>{if(n&&+r.seat===n&&r.id!==rid)r.
 /* ================= PREVIEW + PRINT ================= */
 const pv=h=>`<div class="pvw"><div class="pvs">${h}</div></div>`;
 function layoutPreviews(){
- document.querySelectorAll('#view .pvw').forEach(w=>{const pg=w.querySelector('.a4');if(!pg)return;
+ document.querySelectorAll('#view .pvw').forEach(w=>{const pg=w.querySelector('.a4');if(!pg)return;if(w.classList.contains('edit')){w.firstElementChild.style.transform='none';w.style.height='auto';return}
   if(pg.classList.contains('card')){const ok=fitCard(pg);const warn=w.previousElementSibling;if(warn&&warn.classList.contains('fitw'))warn.hidden=ok}
   const s=w.clientWidth/pg.offsetWidth;w.firstElementChild.style.transform=`scale(${s})`;w.style.height=(pg.offsetHeight*s)+'px'})}
 addEventListener('resize',()=>requestAnimationFrame(layoutPreviews));
@@ -657,12 +669,14 @@ function vCards(){
  ${pages.map(p=>fitWarn+pv(p)).join('')}`}
 function vBills(){
  const ids=['general','seats',...S.scenarios.map(s=>s.id)];if(!ids.includes(V.bill))V.bill=S.scenarios[0]?S.scenarios[0].id:'general';
+ ED=!isLocked()&&!!V.billEdit;
  const page=V.bill==='general'?generalHTML():V.bill==='seats'?seatPlanHTML():V.bill==='rafts'?raftPageHTML():billHTML(sc(V.bill));
+ const editing=ED;ED=false;
  return `<h2>Station bills</h2>
  <div class="panel"><label class="f" for="bl">Scenario</label><select id="bl" data-act="pickBill">${opt('general','General emergency instructions (all crew)',V.bill)}${opt('seats','Lifeboat seat allocation',V.bill)}${S.scenarios.map(s=>opt(s.id,s.name,V.bill)).join('')}</select>
- <div class="actions"><button class="b p" data-act="printBill">${framed?"Save print file":"Print this list"}</button><button class="b" data-act="printAllBills">Print all lists</button><button class="b" data-act="printEverything">Print everything</button></div>
+ <div class="actions"><button class="b p" data-act="printBill">${framed?"Save print file":"Print this list"}</button><button class="b" data-act="printAllBills">Print all lists</button><button class="b" data-act="printEverything">Print everything</button>${isLocked()?'':`<button class="b${editing?' p':''}" data-act="billEdit">${editing?'Done editing':'Edit on page'}</button>`}</div>
  <p class="hint">Built live from the crew roster. Ranks without a role appear under "All other crew".</p></div>
- ${V.bill==='seats'?(isLocked()?`<div class="panel"><span class="hint">${esc(askMsg())}</span></div>`:seatPanel()):''}${pv(page)}${V.bill==='seats'&&!isLocked()?seatEditor():''}`}
+ ${editing?`<div class="panel" style="border:2px solid var(--brand)"><b>Editing on the page.</b> <span class="hint">Tap any text with a dashed outline and type. Changes save when you tap away. Scroll sideways to see the whole page.</span></div>`:''}${V.bill==='seats'?(isLocked()?`<div class="panel"><span class="hint">${esc(askMsg())}</span></div>`:seatPanel()):''}${editing?`<div class="pvw edit"><div class="pvs">${page}</div></div>`:pv(page)}${V.bill==='seats'&&!isLocked()?seatEditor():''}`}
 function seatPanel(){
  const n=V.selSeat,r=n?seatOf(n):null;
  if(!n)return `<div class="panel" style="border-color:#1f6feb"><b>Move crew on the plan:</b> tap a seat to select it, then tap another seat to move or swap. <span class="hint">Tap the selected seat again to cancel.</span></div>`;
@@ -783,7 +797,7 @@ function vSet(){
 /* ================= RENDER ================= */
 const view=document.getElementById('view');
 function render(keepScroll){
- const y=scrollY;
+ const y=scrollY;sgHide&&sgHide();
  document.getElementById('shipline').textContent=[S.ship.name,S.ship.call].filter(Boolean).join(' · ');
  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.tab));
  const gate=isLocked()&&['ranks','scen','set'].includes(V.tab);
@@ -792,6 +806,79 @@ function render(keepScroll){
  requestAnimationFrame(layoutPreviews);
  if(V.tab==='bills'&&V.bill==='seats'&&V.selSeat){const g=view.querySelector(`.pvw [data-seat="${V.selSeat}"]`);if(g)g.classList.add('sel')}
  if(keepScroll)scrollTo(0,y);else scrollTo(0,0)}
+const SINGLE_EF=['title','muster','tname','duty','unassigned','footer','eqh','eqc'];
+/* duty suggestions while editing on the page */
+const SG=document.getElementById('sugg');let sgCell=null,sgItems=[],sgOn=-1;
+function sgHide(){SG.style.display='none';sgCell=null;sgItems=[];sgOn=-1}
+function sgPlace(){if(!sgCell)return;const r=sgCell.getBoundingClientRect();const w=Math.min(Math.max(r.width,280),innerWidth-16);let x=r.left+scrollX;x=Math.max(8+scrollX,Math.min(x,scrollX+innerWidth-w-8));SG.style.left=x+'px';SG.style.top=(r.bottom+scrollY+4)+'px';SG.style.width=w+'px'}
+function sgShow(cell,typed){
+ sgCell=cell;const s=sc(cell.dataset.es);const cur=(cell.innerText||'').trim();const q=typed?cur.toLowerCase():'';
+ const own=new Set();if(s)s.teams.forEach(t=>t.members.forEach(m=>m.d&&own.add(m.d)));
+ const toks=q.split(/\s+/).filter(Boolean);
+ const pool=dutyList(s||S.scenarios[0]);
+ let list=q?pool.filter(d=>{const l=d.toLowerCase();return toks.every(t=>l.includes(t))}):pool;
+ if(q){list.sort((a,b)=>(b.toLowerCase().startsWith(q)-a.toLowerCase().startsWith(q))||((own.has(b)?1:0)-(own.has(a)?1:0)))}
+ list=list.filter(d=>!q||d.trim().toLowerCase()!==q).slice(0,500);sgItems=list;sgOn=-1;
+ const hl=d=>{if(!toks.length)return esc(d);const i=d.toLowerCase().indexOf(toks[0]);return i<0?esc(d):esc(d.slice(0,i))+'<b>'+esc(d.slice(i,i+toks[0].length))+'</b>'+esc(d.slice(i+toks[0].length))};
+ SG.innerHTML=`<div class="sh">${q?(list.length?list.length+' matching duties · tap to use, or keep typing':'No match · your text will be saved as a new duty'):'All duties · this drill first · type to filter'}</div>`+list.map((d,i)=>`<div class="it${!q&&d===cur?' on':''}" data-i="${i}" role="option">${hl(d)}${!q&&d===cur?'<small>Current duty</small>':own.has(d)?'<small>Used in this drill</small>':''}</div>`).join('');
+ SG.style.display='block';SG.scrollTop=0;sgPlace();const cn=SG.querySelector('.it.on');if(cn)cn.scrollIntoView({block:'nearest'});sgOn=-1}
+let sgInteract=false;
+function sgPick(i){const d=sgItems[i];if(d==null||!sgCell)return;const c=sgCell;c.textContent=d;sgHide();sgInteract=false;if(document.activeElement===c)c.blur();else commitEd(c)}
+SG.addEventListener('pointerdown',e=>{sgInteract=true;if(e.pointerType==='mouse')e.preventDefault()});
+SG.addEventListener('click',e=>{const it=e.target.closest('.it');if(it)sgPick(+it.dataset.i)});
+document.addEventListener('pointerdown',e=>{if(SG.style.display==='block'&&!SG.contains(e.target)&&e.target!==sgCell){sgInteract=false;setTimeout(()=>{if(document.activeElement!==sgCell)sgHide()},60)}},true);
+view.addEventListener('focusin',e=>{const el=e.target;if(el.dataset&&el.dataset.ef==='duty'&&!isLocked())sgShow(el,false)});
+view.addEventListener('input',e=>{const el=e.target;if(el===sgCell)sgShow(el,true)});
+view.addEventListener('focusout',e=>{if(e.target===sgCell)setTimeout(()=>{if(document.activeElement!==e.target&&!sgInteract)sgHide()},250)});
+addEventListener('scroll',sgPlace,true);addEventListener('resize',sgPlace);
+view.addEventListener('keydown',e=>{const el=e.target;
+ if(el===sgCell&&SG.style.display==='block'&&sgItems.length){
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();sgOn=(sgOn+(e.key==='ArrowDown'?1:-1)+sgItems.length)%sgItems.length;SG.querySelectorAll('.it').forEach((n,i)=>n.classList.toggle('on',i===sgOn));const n=SG.querySelector('.it.on');if(n)n.scrollIntoView({block:'nearest'});return}
+  if(e.key==='Enter'&&sgOn>=0){e.preventDefault();sgPick(sgOn);return}
+  if(e.key==='Escape'){sgHide();return}}
+ if(el.dataset&&el.dataset.ef&&SINGLE_EF.includes(el.dataset.ef)&&e.key==='Enter'){e.preventDefault();el.blur()}});
+view.addEventListener('focusout',e=>{if(e.target===sgCell&&sgInteract)return;commitEd(e.target)});
+function commitEd(el){
+ const ds=el.dataset||{};if(!ds.ef||isLocked())return;
+ let v=(el.innerText||'').replace(/\u00a0/g,' ');v=SINGLE_EF.includes(ds.ef)?v.replace(/\s*\n\s*/g,' ').trim():v.replace(/\n{3,}/g,'\n\n').trim();
+ const s=ds.es?sc(ds.es):null,t=s&&ds.et!=null?s.teams[+ds.et]:null;
+ switch(ds.ef){
+  case 'title':if(s)s.title=v||s.name;break;
+  case 'muster':if(s&&v)s.muster=v;break;
+  case 'immediate':if(s)s.immediate=v;break;
+  case 'tname':if(t&&v)t.name=v;break;
+  case 'task':if(t)t.task=v;break;
+  case 'duty':if(t){const idx=ds.em.split(',').map(Number),old=(t.members[idx[0]]||{}).d;if(v===old||!v)return;dutyChange(s,t,idx,old,v,el);return}break;
+  case 'unassigned':if(s)s.unassigned=v;break;
+  case 'instructions':if(s)s.instructions=v;break;
+  case 'footer':if(s)s.footer=v;break;
+  case 'general':S.general=v;break;
+  case 'eqh':S.equipment.head[+ds.ei]=v;break;
+  case 'eqc':S.equipment.rows[+ds.ei][+ds.ec]=v;break;
+  case 'bnotes':S.boat.notes=v;break;
+  case 'blaunch':S.boat.launch=v;break;
+  default:return}
+ save()}
+function dutyUses(old,s,t,idx){let all=0,bill=0;S.scenarios.forEach(x=>x.teams.forEach(tt=>tt.members.forEach((m,mi)=>{if(m.d!==old)return;if(tt===t&&idx.includes(mi))return;all++;if(x===s)bill++})));return {all,bill}}
+function applyDuty(scope,s,t,idx,old,v){
+ if(scope==='row')idx.forEach(i=>{const m=t.members[i];if(m)m.d=v});
+ else S.scenarios.forEach(x=>{if(scope==='bill'&&x!==s)return;x.teams.forEach(tt=>tt.members.forEach(m=>{if(m.d===old)m.d=v}))});
+ if(!S.library.includes(v))S.library.push(v);save()}
+function dutyChange(s,t,idx,old,v,el){
+ const u=dutyUses(old,s,t,idx);
+ if(!u.all){applyDuty('row',s,t,idx,old,v);return}
+ const ranks=idx.map(i=>rn(t.members[i].r)).join(', ');
+ const d=document.createElement('div');d.id='dlg';d.innerHTML=`<div class="box" role="dialog" aria-modal="true"><h3>This duty is used elsewhere</h3><p class="q">It's assigned ${u.all} more time${u.all>1?'s':''}${u.bill?`, ${u.bill} of them on this bill`:''}. Where should the change apply?</p>
+ <div class="dd"><b>From:</b> ${esc(old)}</div><div class="dd"><b>To:</b> ${esc(v)}</div>
+ <div class="opts"><button class="b p" data-c="all">Change everywhere<small>All ${u.all+idx.length} places, in every drill</small></button>
+ ${u.bill?`<button class="b" data-c="bill">Only on this bill<small>${u.bill+idx.length} places in ${esc(s.name)}</small></button>`:''}
+ <button class="b" data-c="row">Only this row<small>${esc(ranks)} in ${esc(t.name)}</small></button>
+ <button class="b" data-c="cancel">Cancel<small>Keep the old wording</small></button></div></div>`;
+ document.body.appendChild(d);
+ d.addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b&&e.target!==d)return;const c=b?b.dataset.c:'cancel';d.remove();
+  if(c==='cancel'){el.textContent=old;return}
+  applyDuty(c,s,t,idx,old,v);render(true)});
+ const f=d.querySelector('[data-c=all]');if(f)f.focus()}
 document.getElementById('lockBtn').addEventListener('click',()=>{if(isLocked()){V.tab='set';render()}else{setUnlocked(false);V.tab='cards';render()}});
 view.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='pinIn'){const u=view.querySelector('[data-act=unlock]');if(u)u.click()}});
 document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;V.tab=b.dataset.tab;V.rankEdit=null;V.scEdit=null;render()});
@@ -844,6 +931,7 @@ view.addEventListener('click',e=>{
  case 'printBill':return doPrint([V.bill==='general'?generalHTML():V.bill==='seats'?seatPlanHTML():V.bill==='rafts'?raftPageHTML():billHTML(sc(V.bill))],V.bill==='general'?'General emergency instructions':V.bill==='seats'?'Lifeboat seat allocation':V.bill==='rafts'?'Liferaft allocation':'Station bill '+sc(V.bill).name);
  case 'seatClear':{const o=seatOf(V.selSeat);if(o)o.seat='';V.selSeat=null;save();return render(true)}
  case 'seatDone':V.selSeat=null;return render(true);
+ case 'billEdit':V.billEdit=!V.billEdit;return render(true);
  case 'askPerm':note(askMsg());return;
  case 'unlock':{const v=(document.getElementById('pinIn')||{}).value||'';pinOk(v).then(ok=>{if(ok){setUnlocked(true);render()}else{const m=document.getElementById('pinMsg');if(m)m.textContent='Wrong PIN. Ask the '+contact()+' for permission.'}});return}
  case 'lockNow':setUnlocked(false);V.tab='cards';return render();

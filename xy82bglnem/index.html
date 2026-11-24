@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="theme-color" content="#14181d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Station Bill Generator</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<meta name="apple-mobile-web-app-title" content="Station Bill">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: shipboard safety signage, clear and calm
+   IDEA: the laminated muster card in the cabin frame
+   PICTURE: the A4 card itself, live, with red alarm signals
+   COLOUR and TYPE: paper white, ink, signal red; Barlow / Barlow Condensed
+   LAYOUT: phone first, bottom tabs, preview on top, editors below */
+:root{--sans:Barlow,"Avenir Next","Segoe UI",Roboto,system-ui,sans-serif;--cond:"Barlow Condensed","Avenir Next Condensed","Roboto Condensed","Arial Narrow",sans-serif-condensed,Arial,sans-serif;color-scheme:light dark;--bg:light-dark(#e9ecef,#101317);--card:light-dark(#fff,#1b2026);--ink:light-dark(#14181d,#e8ebee);--mut:light-dark(#5b636d,#9aa3ad);--line:light-dark(#d5d9de,#2e353d);--red:#d42a20;--redbg:light-dark(#fdecea,#3a1714);--bar:#14181d}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);overflow-x:clip;-webkit-text-size-adjust:100%}
+header.top{position:sticky;top:0;z-index:5;background:var(--bar);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px}
+header.top h1{font:600 20px/1.1 var(--cond);margin:0;letter-spacing:.2px;flex:1}
+header.top .sub{font-size:13px;color:#aab3bd;display:block;font-weight:400;font-family:var(--sans)}
+.sig{display:inline-flex;gap:3px;align-items:center}.sig i{display:block;height:5px;width:7px;background:var(--red);border-radius:1px}.sig i.l{width:22px}
+#saved{font-size:12px;color:#7fd18b;opacity:0;transition:opacity .3s}#saved.on{opacity:1}
+main{max-width:860px;margin:0 auto;padding:14px 14px calc(96px + env(safe-area-inset-bottom))}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs button{border:0;background:none;color:var(--mut);font:500 13px var(--sans);padding:8px 2px 9px;min-height:58px;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+nav.tabs button.on{color:var(--red)}
+h2{font:600 24px/1.1 var(--cond);margin:6px 0 12px}
+h3{font:600 18px/1.2 var(--cond);margin:0 0 8px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.row>*{flex:1 1 140px}
+.grow{flex:1}
+label.f{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input,select,textarea{font:16px var(--sans);color:var(--ink);background:light-dark(#fff,#12161a);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-height:44px}
+textarea{min-height:84px;resize:vertical;line-height:1.4}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:var(--red)}
+button.b{font:600 15px var(--sans);min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.p{background:var(--red);border-color:var(--red);color:#fff}
+button.d{color:var(--red)}button.d[data-armed]{background:var(--red);color:#fff}
+button.s{min-height:38px;padding:4px 10px;font-size:14px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{flex:1;border:0;background:var(--card);color:var(--ink);font:600 15px var(--sans);min-height:44px}.seg button.on{background:var(--bar);color:#fff}
+.hint{font-size:13px;color:var(--mut)}
+.warn{background:var(--redbg);color:var(--red);border-radius:8px;padding:8px 10px;font-size:14px;margin:8px 0}
+.list{border-top:1px solid var(--line)}.li{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}
+.li .nm{flex:1;font-weight:600}.li .tag{font-size:12px;color:var(--mut)}
+.badge{display:inline-block;font:600 12px var(--sans);padding:2px 8px;border-radius:20px;background:var(--bg);color:var(--mut)}
+.team{border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0}
+.mem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:8px 0;border-top:1px dashed var(--line)}
+.mem .full{grid-column:1/-1}
+.assign{border-left:3px solid var(--red);padding:2px 0 2px 10px;margin:8px 0}
+.cnt{font-size:12px;color:var(--mut);text-align:right}.cnt.over{color:var(--red);font-weight:600}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.pvw{overflow:hidden;margin:0 0 12px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 18px rgba(0,0,0,.08)}
+.pvs{transform-origin:0 0;width:210mm}
+#print{position:absolute;left:-10000px;top:0;width:210mm}
+
+/* ---------- PAPER ---------- */
+.a4{--sans:Barlow,"Avenir Next Condensed","Roboto Condensed","Arial Narrow",sans-serif-condensed,Arial,sans-serif;width:210mm;background:#fff;color:#111;font:10pt/1.3 var(--sans);padding:12mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.a4.card{height:297mm;display:flex;flex-direction:column}
+.a4 .ph{display:flex;justify-content:space-between;align-items:flex-end;gap:6mm;border-bottom:.9mm solid #111;padding-bottom:2.5mm}
+.a4 .ship{font:700 15pt/1.05 var(--cond);text-transform:uppercase}
+.a4 .ids{font-size:9pt;color:#444;margin-top:1mm}
+.a4 .ttl{text-align:right}.a4 .ttl .k{font:700 11pt var(--cond);letter-spacing:.4px}.a4 .ttl .s2{font-size:9pt;color:#444}
+.a4 .rank{font:700 26pt/1 var(--cond);margin-top:1mm}
+.a4 .alarm{border:.4mm solid var(--red);border-radius:1.5mm;padding:2mm 3mm;margin-top:3mm;display:grid;gap:1.6mm}
+.a4 .al h4{margin:0;font:700 12pt var(--cond);color:var(--red);text-transform:uppercase;letter-spacing:.3px}
+.a4 .al svg{display:block;width:100%;height:3.4mm;margin:.8mm 0}
+.a4 .al p{margin:0;font-size:10pt;color:#222}
+.a4 .cbody{flex:1;min-height:0;overflow:hidden;margin-top:2.5mm}
+.a4 .cols{display:grid;grid-template-columns:1fr 1fr;gap:5mm;height:100%}.a4 .col{overflow:hidden;min-height:0}
+.a4 .en{border-bottom:.25mm solid #bbb;padding:2.2mm 0;break-inside:avoid}
+.a4 .enh{display:flex;justify-content:space-between;align-items:center;gap:2mm;font:700 13.5pt var(--cond);text-transform:uppercase}
+.a4 .enh .rt{font:600 9.5pt var(--sans);color:var(--red);text-transform:none;display:flex;align-items:center;gap:1.5mm}
+.a4 .enh .rt svg{width:16mm;height:2.6mm}
+.a4 ol.as{margin:1mm 0 0;padding-left:4.5mm}.a4 ol.as.one{list-style:none;padding-left:0}
+.a4 .as li{margin:.8mm 0}
+.a4 .tm{font-size:10pt;color:#333;margin-top:.6mm}
+.a4 .du{font-weight:700;font-size:12pt;line-height:1.25;margin-top:.5mm}
+.a4 .cd{color:var(--red);font-weight:700}
+.a4 .kn{background:#eeeeee;border-radius:1mm;padding:1.5mm 2.2mm;margin-top:1.5mm;font-size:10.5pt;line-height:1.3;color:#111}
+.a4.f1 .en{padding:1.4mm 0}.a4.f1 .alarm{padding:1.5mm 2.5mm;gap:1mm}.a4.f1 .kn{padding:.9mm 1.6mm;margin-top:.9mm}
+.a4.f2 .kn{font-size:9.5pt}.a4.f2 .tm{font-size:9pt}.a4.f2 .du{font-size:10.5pt}.a4.f2 .enh{font-size:12pt}.a4.f2 .mb{font-size:8.5pt}.a4.f2 .al p{font-size:9pt}
+.a4.f3 .al p{font-size:8.5pt}.a4.f3 table.sg td{height:7.2mm}.a4.f3 .kn{line-height:1.2}.a4.f3 .enh{font-size:10.5pt}.a4.f3 .as li{margin:.4mm 0}.a4.f3 .ph{padding-bottom:1.5mm}.a4.f3 .rank{font-size:22pt}
+.a4.f4 .kn{font-size:9pt;padding:.6mm 1.4mm}.a4.f4 .du{font-size:9.5pt;line-height:1.22}.a4.f4 .tm{font-size:8pt}.a4.f4 table.sg td{height:6.6mm}.a4.f4 .en{padding:1mm 0}.a4.f4 .alarm{margin-top:2mm}
+.a4 .sigw{margin-top:2.5mm}
+.a4 .sigw .st{font-weight:700;font-size:11pt;margin-bottom:1.2mm}
+.a4 table.sg{width:100%;border-collapse:collapse;table-layout:fixed}
+.a4 table.sg th{background:#111;color:#fff;font:600 9pt var(--sans);text-align:left;padding:1.2mm 2mm}
+.a4 table.sg td{border:.25mm solid #888;height:8.5mm}
+.a4 .pf{display:flex;justify-content:space-between;font-size:8.5pt;color:#555;margin-top:2mm}
+/* seat */
+.a4 .phr{display:flex;align-items:flex-end;gap:3mm;flex:none}
+.a4 .ph>div:first-child{flex:1;min-width:0}
+.a4 .seat{width:23mm;height:23mm;border:1.2mm solid var(--red);border-radius:1.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+.a4 .seat small{font:700 7.5pt var(--cond);letter-spacing:.3px;color:var(--red);text-transform:uppercase;text-align:center;line-height:1.05}
+.a4 .seat b{font:700 30pt/1 var(--cond);color:#111}
+.a4 .sp{display:grid;grid-template-columns:100mm 1fr;gap:4mm;margin-top:3mm;align-items:start}
+.a4 .sp svg{width:100%;height:auto;display:block}
+.a4 table.st{width:100%;border-collapse:collapse;font-size:9.5pt}
+.a4 table.st th{background:#111;color:#fff;text-align:left;font:600 8.5pt var(--sans);padding:1mm 2mm}
+.a4 table.st td{border:.25mm solid #999;padding:.9mm 2mm}
+.a4 table.st td:first-child{width:12mm;text-align:center;font-weight:700;color:var(--red)}
+.a4 table.st tr.sp0 td{color:#888}
+/* liferaft square + muster badges */
+.a4 .seat.raft{border-color:#111}.a4 .seat.raft small{color:#111}.a4 .seat.raft b{font-size:19pt;margin:.6mm 0}.a4 .seat.raft i{font:600 7pt var(--sans);font-style:normal;color:#444}
+.a4 .mb{display:inline-block;background:#111;color:#fff;font:700 10pt/1.3 var(--cond);text-transform:uppercase;letter-spacing:.3px;padding:.2mm 1.6mm;border-radius:.8mm;margin-right:1.2mm;vertical-align:baseline}
+.a4 .mb::before{content:"MUSTER ";color:#ff8a80}
+.a4 .mbig{display:flex;align-items:center;gap:3mm;border:.6mm solid #111;margin-top:2.5mm}
+.a4 .mbig .l{background:#111;color:#fff;font:700 10pt/1.1 var(--cond);text-transform:uppercase;padding:2mm 3mm;align-self:stretch;display:flex;align-items:center}
+.a4 .mbig .v{font:700 14pt/1.15 var(--cond);text-transform:uppercase;padding:1.5mm 0}
+.a4 .tbh .tm2{background:#111;color:#fff;font:700 8.5pt var(--cond);text-transform:uppercase;padding:.3mm 2mm;border-radius:.8mm;white-space:nowrap}
+.a4 .rf{display:grid;grid-template-columns:1fr 1fr;gap:5mm;margin-top:3mm}
+.a4 .rf .bx{border:.5mm solid #111}
+.a4 .rf h4{margin:0;background:#111;color:#fff;font:700 13pt "Barlow Condensed",var(--cond);text-transform:uppercase;padding:2mm 3mm}
+.a4 .rf .loc{font:600 10pt var(--sans);padding:1.5mm 3mm;border-bottom:.3mm solid #999}
+.a4 .rf ol{margin:0;padding:2mm 3mm 2mm 9mm;font-size:10.5pt;line-height:1.55}
+/* side colours: port red, starboard green */
+.a4 .seat.P{border-color:#d42a20}.a4 .seat.P b,.a4 .seat.P small,.a4 .seat.P i{color:#d42a20}
+.a4 .seat.S{border-color:#178a3a}.a4 .seat.S b,.a4 .seat.S small,.a4 .seat.S i{color:#178a3a}
+.a4 .seat.N{border-color:#111}.a4 .seat.N small{color:#111}
+.a4 .bicon{display:flex;flex-direction:column;align-items:center;flex:none;width:14mm}
+.a4 .bicon svg{width:11mm;height:17mm;display:block}
+.a4 .bicon small{font:700 7pt/1.1 var(--cond);text-transform:uppercase;text-align:center;margin-top:.5mm}
+.a4 .sideP{color:#d42a20}.a4 .sideS{color:#178a3a}
+.a4 .rf .bx.P{border-color:#d42a20}.a4 .rf .bx.P h4{background:#d42a20}.a4 .rf .bx.S{border-color:#178a3a}.a4 .rf .bx.S h4{background:#178a3a}
+.a4 .seat.LB{border-color:#E06A00;width:27mm}.a4 .seat.LB small{font-size:8pt}.a4 .seat.LB b,.a4 .seat.LB small{color:#E06A00}.a4 .lbc{color:#E06A00}
+.a4 .grp{display:flex;align-items:flex-end;gap:2mm}.a4 .grp+.grp{border-left:.4mm solid #bbb;padding-left:5mm;margin-left:2mm}
+.a4 .bicon.lb small{color:#E06A00}
+/* bills */
+.a4.bill{min-height:297mm}
+.a4 .band{background:#111;color:#fff;font:700 15pt/1.1 var(--cond);text-transform:uppercase;letter-spacing:.5px;padding:2mm 3mm;margin-top:3mm;text-align:center}
+.a4 .meta{margin-top:2.5mm;font-size:9.5pt;display:grid;gap:.8mm}
+.a4 .meta b{text-transform:uppercase;font-family:var(--cond);font-size:10pt}
+.a4 .imm{border:.35mm solid #111;padding:2mm 3mm;margin-top:2.5mm;font-size:9.5pt}
+.a4 .tb{margin-top:3mm;break-inside:avoid}
+.a4 .tbh{background:#d9d9d9;font:700 11pt var(--cond);text-transform:uppercase;padding:1.3mm 2.5mm;display:flex;justify-content:space-between;gap:3mm}
+.a4 .tbh span{font:500 9pt var(--sans);text-transform:none}
+.a4 .tbt{font-size:9pt;padding:1.3mm 2.5mm;border-left:.25mm solid #999;border-right:.25mm solid #999;white-space:pre-line}
+.a4 table.dt{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9.5pt}
+.a4 table.dt th{background:#111;color:#fff;text-align:left;font:600 8.5pt var(--sans);padding:1mm 2.5mm}
+.a4 table.dt td{border:.25mm solid #999;padding:1.1mm 2.5mm;vertical-align:top}
+.a4 table.dt td:first-child{width:34%}
+.a4 .ld{font-weight:700}.a4 .alt{font-size:8.5pt;color:#444}.a4 .rs{font-size:8pt;color:#555;display:block}
+.a4 .ins{margin-top:3mm;border:.35mm solid #111;padding:2mm 3mm;font-size:9.5pt;white-space:pre-line;break-inside:avoid}
+.a4 .ins h5{margin:0 0 1mm;font:700 10.5pt var(--cond);text-transform:uppercase}
+.a4 table.eq{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt;margin-top:1mm}
+.a4 table.eq th,.a4 table.eq td{border:.25mm solid #999;padding:1mm 2mm;text-align:left;vertical-align:top;white-space:pre-line}
+.a4 table.eq th{background:#d9d9d9}
+.a4 .foot{margin-top:3mm;font:600 9.5pt var(--sans);text-transform:uppercase;text-align:center;border-top:.6mm solid #111;padding-top:2mm}
+.a4 .un{margin-top:2.5mm;font-size:9.5pt}
+
+@page{size:A4;margin:12mm}
+@media print{
+ body{background:#fff}
+ body>*:not(#print){display:none!important}
+ #print{position:static;width:auto}
+ .a4{width:auto;padding:0;break-after:page;page-break-after:always}
+ .a4.card{height:272mm}
+ .a4.bill{min-height:0}
+}
+</style>
+</head>
+<body>
+<header class="top">
+ <h1>Station bill generator<span class="sub" id="shipline"></span></h1>
+ <span id="saved">Saved</span>
+ <span class="sig" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="l"></i></span>
+</header>
+<main id="view"></main>
+<nav class="tabs" id="tabs">
+ <button data-tab="cards"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Cards</button>
+ <button data-tab="bills"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M9 9v11"/></svg>Bills</button>
+ <button data-tab="ranks"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5h5M16 9h5M18 13h3"/></svg>Crew</button>
+ <button data-tab="scen"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>Drills</button>
+ <button data-tab="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>Settings</button>
+</nav>
+<div id="print"></div>
+<script>
+{
+/* ================= SEED DATA (from DUTIES & RESPONSIBILITIES 24 CREW with OSMC) ================= */
+const CDECK='Muster Station: C-Deck (3rd Bridge Deck)',FS1='Fire Station No. 1: D-Deck, starboard side locker',FS2='Fire Station No. 2: Upper Deck, starboard side, inside accommodation',ECR='Engine Control Room',SOPEP='SOPEP Equipment Locker Area: front of accommodation, port side',SGR='Steering Gear Room',FCLE='Forecastle Deck',BRG='Bridge',RBS='Rescue Boat Station',DES='As designated by Team Leader';
+const ROSTER=[['MA','Master','Deck',0],['CO','Chief Officer','Deck',0],['2O','2nd Officer','Deck',1],['3O','3rd Officer','Deck',1],['J3O','Junior 3rd Officer','Deck',1],['CDT','Officer Deck Cadet','Deck',0],['CE','Chief Engineer','Engine',0],['2E','2nd Engineer','Engine',1],['3E','3rd Engineer','Engine',1],['4E','4th Engineer','Engine',1],['ETO','Electrician','Engine',0],['AETO','Assistant Electrician','Engine',0],['BSN','Bosun','Deck',0],['DF','Deck Fitter','Deck',0],['AB1','AB1','Deck',1],['AB2','AB2','Deck',1],['OS1','OS1','Deck',1],['OS2','OS2','Deck',1],['OSMC','OS – Maintenance Crew (OS-MC)','Deck',0],['EF','Engine Fitter','Engine',0],['MM','Motorman','Engine',0],['CK','Chief Cook','Catering',0],['CA','Catering Assistant','Catering',0]].map(([id,name,dept,w])=>({id,name,dept,watch:!!w}));
+let _n=0;const uid=()=>Date.now().toString(36)+(_n++).toString(36);
+const M=(r,d,c,l)=>({r,d,c:c||'',l:l||''});
+const W=(rs,d,c,l)=>rs.map(r=>M(r,d,c,l));
+const T=(name,muster,task,lead,alt,members)=>({id:uid(),name,muster,task,lead:lead||'',alt:alt||'',members});
+const OFF3=['2O','3O','J3O'],ENG3=['2E','3E','4E'],RAT=['AB1','AB2','OS1','OS2','OSMC'];
+const FIRE_T1='Put on fireman\'s outfit and smoke-diving equipment.\nPrimary task: main fire-fighting and search and rescue team if fire is on deck or in accommodation. Perform rescue if emergency is on deck. Bring EEBD, additional CABA and torch light.\nSecondary task: assist Team No. 2 if fire or emergency is in the engine room.';
+const FIRE_T2='Put on fireman\'s outfit and smoke-diving equipment.\nPrimary task: main fire-fighting and search and rescue team if fire is in the engine room. Perform rescue if emergency is in the engine room. Bring EEBD, additional CABA and torch light.\nSecondary task: assist Team No. 1 if fire or emergency is in accommodation or deck area.';
+const FA_T='Bring stretchers, blankets, heart defibrillator and oxygen apparatus to the area, together with a first aid kit, and prepare for treatment.';
+const FA_M='Report to Muster Station. Bring first aid equipment, stretcher, blankets and oxygen apparatus. Prepare to administer treatment.';
+const ER_T='Meet at Engine Control Room. Man the engine room and await orders from the Bridge.';
+const FA3=(t)=>T('First Aid Team',t===FA_T?DES:'',t,'2O','',[M('2O','Team Leader.'),M('CK','Assist as required.'),M('CA','Assist as required.')]);
+const GEN_FOOT='When the general alarm sounds, all personnel including supernumeraries, passengers and visitors shall meet at the designated muster station.';
+const DISP='At Master\'s / Chief Officer\'s disposal.';
+const LB_INS='1. All personnel meet at the designated Lifeboat Muster Station (C-Deck), wearing suitable clothing.\n2. All personnel bring or wear lifejackets and immersion suits as appropriate before preparing the lifeboat for launching.\n3. The Lifeboat Commander is in charge of mustering, preparation and launching.\n4. Liferafts to be prepared if ordered by the Master.\n\nLifeboat drill: all personnel shall gain experience in all aspects of launching procedures.';
+const BOAT_AL='7 short followed by 1 long blast on the ship\'s alarm system, followed by an announcement to evacuate on the PA system, by two-way radio and/or directly.';
+const LOP_BR='Sound GENERAL ALARM. Keep in contact with the engine room. Consider using the ANCHORS. Keep VHF on Channel 16 and INFORM ships in the vicinity. Hoist / exhibit proper signals. Inform the COMPANY, AUTHORITIES, INSURANCE COMPANY and AMVER. Give vessel\'s position to the appointed GMDSS (GOC) operator. Consider the dangers of the situation and use the proper type of radio message. Prepare to send URGENCY CALL and DSC URGENCY MESSAGE. KEEP SHARP LOOKOUT AT ALL TIMES.';
+const LOP_DK='Report to Muster Station. Stand by for orders from the Bridge. Switch on the DECK LIGHTING. Prepare anchors in case of immediate need. Prepare lifeboat and liferafts for possible abandoning of the vessel.';
+const LOP_ER='Report to Engine Control Room and conduct muster. Carry out visual inspection of the main engine to determine the cause and severity of the situation.';
+const lossTeams=()=>[
+ T('Bridge Team',BRG,LOP_BR,'MA','',[M('MA','In command of all operations.'),M('3O','Assist Master. Operate GMDSS equipment. Keep in contact with the engine room.'),M('J3O','Report to the Bridge. Assist Master. Prepare the contingency manuals.'),M('AB2','Helmsman. Hoist flags and proper signals.'),M('CDT','Assist as required.')]),
+ T('Deck Team','',LOP_DK,'CO','',[M('CO','Team Leader. In charge of deck operations.'),M('BSN','Report to Chief Officer. Stand by at the lifeboat station.'),M('DF','Report to Chief Officer. Stand by forward and prepare anchors.'),M('AB1','Report to Chief Officer. Stand by forward and assist Deck Fitter in preparing the anchors.'),M('OS1','Report to Chief Officer. Stand by at the port side liferaft station.'),M('OS2','Report to Chief Officer. Stand by at the port side liferaft station.'),M('OSMC','Report to Chief Officer. Stand by at the starboard side liferaft station.')]),
+ FA3(FA_M),
+ T('Engine Room Team',ECR,LOP_ER,'CE','',[M('CE','In charge of all machinery operations.'),...W(['2E','3E','4E','ETO','AETO'],'Assist Chief Engineer.'),M('EF','Assist as required.'),M('MM','Assist as required.')])];
+const dmgDeck=(task,g)=>T('Deck Team','',task,'CO','',[M('CO','In charge of deck operation. Take control of stability.'),M('CDT','Report to Chief Officer. Assist as required.'),M('DF',g?'Take soundings of tanks and bilges when ordered.':'Report to Chief Officer. Take soundings of tanks and bilges when ordered.'),...W(['AB1','OS1','OS2'],g?'Report to Chief Officer. Assist as required. Take soundings around the vessel.':'Report to Chief Officer. Assist as required.')]);
+const dmgTech=(task)=>T('Technical Team','',task,'ETO','',[M('ETO','Team Leader. In charge of electrical connections.'),M('AETO','Assist Team Leader. Prepare lifeboat or liferafts.'),M('BSN','Assist Team Leader. Prepare lifeboat or liferafts.')]);
+const dmgER=(task)=>T('Engine Room Team',ECR,task,'CE','',[M('CE','In charge of all machinery operations.'),...W(ENG3,'Assist Chief Engineer.'),M('EF','Assist as required. Take soundings of fuel tanks when ordered.'),M('MM','Assist as required. Take soundings of fuel tanks when ordered.')]);
+const bridge4=(a,b)=>T('Bridge Team',BRG,a,'MA','',[M('MA','In command of all operations.'),M('3O','Assist Master. Relieve the Duty Officer. GMDSS operator.'),M('J3O','Assist Master. Prepare the contingency manuals.'),M('AB2',b)]);
+const SC=(o)=>Object.assign({id:uid(),alarm:'general',group:'B',muster:CDECK,unassigned:DISP,immediate:'',keyNote:'',instructions:'',footer:GEN_FOOT,fireStations:false,equipment:false,mobAlarm:false,alarmText:''},o);
+const lbMembers=(raft)=>raft?[
+ M('MA','Overall command.'),M('CO','In charge of launching liferaft and mustering.'),M('2O','Assist Chief Officer. Bring medical supplies and equipment if time permits.'),M('3O','Bring portable VHF radio, SART and EPIRB. Release liferaft.'),M('J3O','Bring important documents.'),M('CE','In charge of liferaft davit.'),...W(['2E','3E','4E','ETO','AETO'],'Assist as required.'),M('BSN','Remove lashing.'),M('DF','Remove lashing.'),M('AB1','Assist as required.'),M('AB2','Bring additional pyrotechnics.'),M('OS1','Remove lashing. Assist as required.'),M('OS2','Remove lashing. Assist as required.'),...W(['OSMC','CDT','EF','MM'],'Assist as required.'),M('CK','Bring extra blankets and provisions.'),M('CA','Bring extra blankets and provisions.')]:[
+ M('MA','Overall command.'),M('CO','In charge of launching lifeboat and mustering. In charge of releasing lifeboat. Lifeboat coxswain.'),M('2O','Assist Chief Officer. Bring medical supplies and equipment if time permits.'),M('3O','Bring portable VHF radio, SART, EPIRB and important documents.'),M('J3O','Bring important documents (logbook, passports, SART, etc.).'),M('CE','In charge of lifeboat motor.'),M('2E','Assist as required. Bring engine documents.'),M('3E','Assist as required. Start lifeboat engine.'),M('4E','Assist as required. Start lifeboat engine.'),M('ETO','Disconnect battery charger.'),M('AETO','Assist in boarding procedure. Remove lashing and securing.'),M('BSN','Assist in boarding procedure. Remove lashing and securing. In charge of emergency steering.'),M('DF','Assist in boarding procedure. Remove lashing and securing. In charge of emergency release.'),M('AB1','Assist as required.'),M('AB2','Bring additional pyrotechnics. Assist as required.'),M('OS1','Assist as required. Ready port liferaft. When in water, in charge of forward equipment.'),M('OS2','Assist as required. Ready port liferaft.'),M('OSMC','Assist as required. Ready port liferaft.'),M('CDT','Assist as required. Ready starboard liferaft and davit.'),M('EF','Assist as required. Ready starboard liferaft and davit.'),M('MM','Assist as required. Ready port liferaft.'),M('CK','Bring extra blankets, provisions and first aid kit.'),M('CA','Bring extra blankets, provisions and first aid kit.')];
+const SCEN=()=>[
+SC({name:'Fire',title:'Fire emergency plan',alarm:'fire',group:'A',fireStations:true,
+ keyNote:'Priority one: save lives. Fight the fire in its first minute only if safe, then close all ventilation. Don\'t open doors or hatches to the fire without fire-fighting outfit. Smouldering fires may give off invisible toxic gas. Report any missing person.',
+ instructions:'PRIORITY NUMBER ONE IS TO SAVE LIVES.\nActivate the alarm on detection or suspicion of fire. If possible and safe, try to extinguish the fire with extinguishers, blankets, etc. If it is not possible to put out the fire in its first minute, close all ventilation to prevent air reaching the fire. DO NOT OPEN doors or hatches leading to the fire or suspected fire unless wearing fire-fighting outfit. A smouldering (non-flame) fire may produce toxic and invisible gases.\n\nREPORT IF ANY PERSON IS MISSING. A search team will be organised by the Bridge to search for missing crew. All crew and officers shall be familiar with the location and use of all fire-fighting equipment, procedures and emergency exits.',
+ footer:'Fire alarm: crew, supernumeraries, family members and others not listed for assignment report to the Muster Station (C-Deck).',
+ teams:[T('Bridge Team',BRG,'Operation centre: central command and control.','MA','',[M('MA','Overall command. Keeps in contact with all teams.'),M('3O','Assist Master. Relieve Duty Officer and operate GMDSS equipment as per Master\'s instructions.'),M('AB2','Helmsman.')]),
+ T('Team No. 1',FS1,FIRE_T1,'CO','',[M('CO','Team Leader. At scene of incident. Directs operations on deck or in accommodation.'),M('J3O','Assist smoke divers. Bring rescue equipment. Assist as required.'),M('DF','Smoke diver / rescuer.'),M('AB1','Smoke diver / rescuer.'),M('OS1','Assist as required. Bring rescue equipment.'),M('CDT','Assist Team Leader. Replace CABA bottles of smoke divers.')]),
+ T('Team No. 2',FS2,FIRE_T2,'CE','',[M('CE','Team Leader. At scene of incident. Directs operations in engine spaces.'),M('3E','Smoke diver / rescuer.'),M('4E','Smoke diver / rescuer.'),M('OS2','Assist as required. Bring rescue equipment.'),M('OSMC','Assist smoke divers. Bring rescue equipment. Assist as required.'),M('EF','Assist Team Leader. Replace CABA bottles of smoke divers.')]),
+ T('Technical Team',DES,'Bring equipment, shut ventilation and electrical connections. Assist in rigging fire hoses.','ETO','',[M('ETO','Team Leader. Shut off all vents and electrical connections.'),M('AETO','Assist Electrician. Shut off all vents and electrical connections.'),M('BSN','Assist Electrician. Prepare survival craft for possible abandoning of vessel.')]),
+ T('First Aid Team',DES,FA_T+' Assist in rigging fire hoses.','2O','',[M('2O','Team Leader.'),M('CK','Assist first-aider. Bring defibrillator and stretcher (not to be carried inside an enclosed space).'),M('CA','Assist first-aider. Bring first aid equipment.')]),
+ T('Engine Room Team',ECR,ER_T,'2E','',[M('2E','Team Leader.'),M('MM','Assist Team Leader.')])]}),
+SC({name:'Abandon ship – lifeboat',title:'Lifeboat muster list',group:'A',equipment:true,alarmText:BOAT_AL,
+ keyNote:'Muster at C-Deck in warm clothing with lifejacket and immersion suit. The Lifeboat Commander is in charge of mustering, preparation and launching.',
+ instructions:LB_INS,teams:[T('Allocation to Lifeboat','','','CO','',lbMembers(0))]}),
+SC({name:'Abandon ship – liferaft',title:'Liferaft muster list',group:'A',equipment:true,alarmText:BOAT_AL,
+ keyNote:'Muster at C-Deck as for lifeboat. Liferafts are prepared only on the Master\'s order.',
+ instructions:LB_INS,teams:[T('Allocation to Liferaft','','','CO','',lbMembers(1))]}),
+SC({name:'Man overboard',group:'A',title:'Man overboard / recovery of person in the water',mobAlarm:true,
+ immediate:'Shout "MAN OVERBOARD", throw a lifebuoy or anything that floats. Inform the Bridge, specify which side the person fell overboard, and keep the person in the water in sight at all times.',
+ keyNote:'Shout "Man overboard", throw a lifebuoy or anything that floats, tell the Bridge which side, and keep the person in sight. Lookouts keep pointing.',
+ teams:[T('Bridge Team',BRG,'Immediately release the LIFEBUOY WITH LIGHT AND SMOKE SIGNAL. Press GPS/ECDIS MOB button. Start WILLIAMSON TURN. Sound the general alarm. Inform the engine room. Send URGENCY message.','MA','',[M('MA','Overall command.'),M('3O','Relieve the Duty Officer. GMDSS operator. Assist Master.'),M('AB2','Helmsman.')]),
+ T('Preparation and Launching Team',RBS,'Prepare rescue boat for launching and recovery. Assist rescue team in retrieving the survivors.','CO','',[M('CO','In charge of launching and recovery of rescue boat.'),M('BSN','Launching and recovery of rescue boat as per Chief Officer\'s instructions.'),M('DF','Launching and recovery of rescue boat as per Chief Officer\'s instructions.'),M('J3O','Assist Master. Additional lookout on the Bridge.')]),
+ T('Rescue Boat Crew',RBS,'Don lifejackets and/or immersion suits, prepare to board rescue boat.','2O','3E',[M('2O','Team Leader. Retrieve person in the water.'),M('3E','Alternate Team Leader. Additional lookout, port quarter.'),M('AB1','Boat crew. Release forward painter, recover MOB.')]),
+ T('First Aid Team','','Prepare first aid equipment and stretcher. Serve as additional lookouts. Apply necessary first aid to survivor.','2O','CK',[M('2O','Team Leader. Perform first aid after recovery.'),M('CK','Acts as Team Leader while 2nd Officer is in the boat. Additional lookout, port quarter.'),M('CA','Assist as ordered. Additional lookout, starboard quarter.')]),
+ T('Lookouts','','Proceed to assigned location. Keep pointing at the position of the MOB when sighted. Assist First Aid Team when MOB is recovered.','','',[M('CDT','Lookout FORWARD. Assist as required.'),M('MM','Lookout FORWARD. Assist as required.'),M('EF','Lookout AFT. Assist as required.'),M('OSMC','Lookout AFT. Assist as required.'),M('OS1','Lookout PORT BRIDGE WING. Assist as required.'),M('OS2','Lookout STBD BRIDGE WING. Assist as required.')]),
+ T('Engine Room Team',ECR,ER_T,'CE','',[M('CE','In charge of all machinery operations.'),M('2E','Assist in machinery operations.'),M('4E','Assist in machinery operations.'),M('ETO','Assist in electrical / machinery operations.'),M('AETO','Assist in electrical / machinery operations.')])]}),
+SC({name:'Oil spill (SOPEP)',title:'Oil pollution prevention team',muster:SOPEP,unassigned:'Meet at SOPEP equipment locker. Assist as required.',
+ keyNote:'Report any spill at once. Wear oilskins, helmet, rubber boots, goggles and gloves. No smoking, strict fire precautions.',
+ instructions:'In the event of an oil spill, the Oil Pollution Prevention Team is called out immediately to start preventive measures to mitigate the effect of the spill, to recover and transfer as much oil as possible to available tanks, and to clean up deck and walkways so they no longer hinder vessel and cargo operations. Depending on size and severity, additional crew and officers are mobilised. All team members shall be aware of their duties.\n\nFor clean-up, the team reports to the Duty Officer wearing proper safety and protective gear: oilskins, helmet, rubber boots, safety goggles and rubber gloves if handling oil directly.\n\nCrew not listed for assignment meet at the oil spill equipment locker and assist as required.',
+ footer:'When the general alarm sounds, all personnel including supernumeraries, passengers and visitors shall meet at the SOPEP Equipment Locker Area.',
+ teams:[T('Oil Pollution Prevention Team','','','MA','',[M('MA','Overall in charge. Inform authorities (Port Control, USCG, etc.), agent, P&I representative and QI. Update all concerned at regular intervals. Request assistance as necessary.'),M('3O','Assist Master.'),M('CO','In charge of deck operation and clean-up. If required, cease cargo operation, close hatches, alert shore staff, have fire hoses, foam and powder extinguishers ready. Keep Master informed.'),M('CE','In charge of bunkering operation and Containment Team. Organise distribution of detergents, absorbents and equipment. Rig portable transfer pump to tanks with available space.'),
+  ...W(OFF3,'Call out the Oil Pollution Prevention Team as ordered by C/O or C/E. Barrier the spill area, post NO SMOKING signs, keep people away. Mobilise deck hands, collect oil spill equipment and assist C/O.','on','Duty Officer'),
+  ...W(OFF3.concat(ENG3),'Report to Chief Officer or Chief Engineer respectively.','off','Off-duty officer'),
+  ...W(ENG3,'Assist Chief Engineer.','on','Duty Engineer'),
+  ...W(RAT,'If oil spill or leakage detected, immediately alert Duty Officer, C/O, C/E or Duty Engineer. Assist Duty Officer.','on','Ratings on duty')]),
+ T('Clean-up Team',SOPEP,'Meet at Muster Station. Report to Bridge when ready. Carry out emergency clean-up using all available materials such as portable pumps, absorbents and chemicals (if approved by authorities). Fire precautions to be observed at all times.','CO','',[M('CO','Team Leader.'),M('BSN','Wear protective clothing. Bring shovels and buckets.'),M('DF','Wear protective clothing. In charge of scupper plugs on deck.'),M('AB1','Wear protective clothing. Bring hand scoops and absorbent pads.'),M('AB2','Wear protective clothing. Bring oil booms and shovels.'),M('OS1','Wear protective clothing. Bring sawdust buckets and waste bags.'),M('OS2','Wear protective clothing. Bring empty drums and H2 bags.'),M('CDT','Assist as required.')]),
+ T('Containment Team',SOPEP,'Meet at Muster Station. Report to Bridge when ready. Carry out emergency containment to stop or minimise pollution using booms, valves, pumps, etc. Where oil is spilled into the water, limit the spill by rigging booms, old mooring ropes, air-filled hoses around the ship.','CE','',[M('CE','Team Leader.'),...W(ENG3,'Assist Chief Engineer.'),M('EF','Prepare air pump and accessories. Remove the head of the sludge tank breather pipe for possible transfer of collected oil.'),M('MM','Bring oil booms and absorbent pads.'),M('ETO','Stop fans and close ventilation flaps.'),M('AETO','Provide lighting if possible and look out for possible explosion.')])]}),
+SC({name:'Emergency steering',title:'Emergency plan – emergency steering',
+ keyNote:'Steering gear room team engages emergency steering and keeps contact with the Bridge. Forward team prepares anchors.',
+ teams:[T('Bridge Team',BRG,'Operation centre: central command and control. INFORM the engineer on duty. REDUCE SPEED or STOP ENGINES if necessary. PREPARE TO ANCHOR if in shallow water. Broadcast WARNING to ships in vicinity.','MA','',[M('MA','In command of all operations.'),...W(OFF3,'Assist Master. GMDSS operator.','on','Officer on duty'),M('AB2','Lookout.'),M('CDT','Lookout. Assist as required.')]),
+ T('Steering Gear Room Team',SGR,'Muster at steering gear room. Engage the EMERGENCY STEERING.','CO','',[M('CO','Team Leader. Keeps in contact with the Bridge.'),...W(ENG3,'Engage the emergency steering, rectify failure of steering gear. Assist Chief Officer. Keep in contact with engine room team.','on','Engineer on duty'),M('BSN','Assist as required.'),M('AB1','Assist as required.'),M('OS2','Assist as required.'),M('ETO','Engage the emergency steering. Rectify failure of steering gear.'),M('AETO','Assist as required.')]),
+ T('Forward Team',FCLE,'Proceed immediately to forecastle deck. Prepare to anchor.','','',[...W(OFF3,'Immediately proceed to forecastle. Team Leader.','off','Officer off duty'),M('DF','Prepare and let go anchors when ordered. Lookout at forecastle deck.'),M('OS1','Lookout at forecastle deck. Assist as required.')]),
+ T('Engine Room Team',ECR,'Rectify failure of steering gear system.','CE','',[M('CE','In charge of all machinery operations.'),...W(ENG3,'Assist in machinery operations.','off'),M('EF','Assist as required.'),M('MM','Assist as required.')])]}),
+SC({name:'Emergency towing',title:'Emergency plan – emergency towing',
+ keyNote:'Towing team meets at the muster station with all towing tools ready and keeps contact with the Bridge.',
+ teams:[T('Bridge Team',BRG,'Operation centre: central command and control. INFORM the engineer on duty. REDUCE SPEED or STOP ENGINES if necessary. PREPARE TO ANCHOR if in shallow water. Broadcast WARNING to ships in vicinity.','MA','',[M('MA','In command of all operations.'),M('3O','Assist Master. Relieve the Duty Officer. GMDSS operator.'),M('J3O','Assist Master. Prepare the contingency manuals.'),M('CDT','Assist as required.')]),
+ T('Emergency Towing Team','','Meet at Muster Station. Prepare all tools needed for emergency towing.','CO','',[M('CO','Team Leader. Keeps in contact with the Bridge.'),M('2O','Assist Chief Officer.'),M('BSN','Prepare all deck tools needed.'),M('DF','Operator of mooring winches. Prepare grease for wire ropes.'),M('AB1','Bring 2 line-throwing apparatus. Prepare ship\'s heaving line.'),M('OS1','Bring 2 line-throwing apparatus. Linesman.'),M('OS2','Linesman.')]),
+ T('Engine Room Team',ECR,'Rectify engine failure.','CE','',[M('CE','In charge of all machinery operations. Rectify engine failure.'),...W(ENG3,'Assist in machinery operations.'),M('ETO','Assist as required.'),M('AETO','Assist as required.'),M('EF','Assist as required. Prepare cutting and welding tools.'),M('MM','Assist as required.')])]}),
+SC({name:'Collision',title:'Emergency plan – collision',
+ keyNote:'Muster to check for missing or injured crew. Close watertight doors. Sound tanks and bilges. Prepare survival craft for possible abandoning.',
+ teams:[bridge4('Sound General Alarm and muster the crew to check if anybody is missing or injured. Send necessary urgency / distress messages. Establish contact with the other vessel and exchange information. Offer assistance if possible. Check and update position. Notify vessels in the vicinity, the Company, local authorities and insurance. Evaluate the possibility of abandoning the vessel. Collect all facts.','Bridge watchman.'),
+ dmgDeck('Check stability. Consider actions to reduce further damage. Evaluate risk of pollution. Sound bilges and tanks. Keep in contact with the Bridge.'),
+ dmgTech('Report to Muster Station. Close watertight doors. Provide lighting and check electrical connections. Prepare lifeboat or liferafts for possible abandoning of the vessel. Keep in contact with the Bridge.'),
+ FA3(FA_M),
+ dmgER('Evaluate risk of pollution. Check soundings of fuel tanks. Check the damage to the vessel and analyse the situation. Keep in contact with the Bridge.')]}),
+SC({name:'Grounding',title:'Emergency plan – grounding',
+ keyNote:'Sound tanks and bilges and compare with departure soundings. Don\'t open ullage plugs needlessly, as buoyancy may be lost. No smoking. Close watertight doors.',
+ teams:[bridge4('Sound GENERAL ALARM, inform engine room. Consider STOPPING ENGINES and USING THE ANCHORS. Keep VHF on Channel 16, INFORM ships in the vicinity. Exhibit proper signals: vessel aground. Inform the COMPANY, AUTHORITIES, INSURANCE and AMVER. Give position to the GMDSS (GOC) operator. If the vessel is sinking or sliding off the ground, SEND DISTRESS CALL AND MESSAGE. Prepare to ABANDON SHIP.','Helmsman. Hoist flags and proper signals.'),
+ dmgDeck('Check stability. Consider actions to reduce further damage. Evaluate risk of pollution. Take soundings of tanks and bilges, watch for leaks, and compare against departure soundings. Check compartments adjacent to the hull: ullage plugs should not be opened indiscriminately as loss of buoyancy could result. Inspect the vessel visually. Take soundings around the vessel to determine the nature and gradient of the seabed.',1),
+ dmgTech('Switch on the DECK LIGHTING. Eliminate all avoidable sources of ignition and ban all smoking on board. Close watertight doors. Prepare lifeboat and liferafts for possible abandoning of the vessel.'),
+ FA3(FA_M),
+ dmgER('Evaluate risk of pollution. Check soundings of fuel tanks. Evaluate the probability of additional release of oil. Carry out visual inspection to determine the severity. Consider stopping air intake to accommodation and non-essential air intake to the engine room.')]}),
+SC({name:'Enclosed space rescue',group:'A',title:'Rescue in enclosed space',fireStations:true,
+ immediate:'Time matters: rescue the person(s) as soon as possible. A stretcher is NOT to be used inside the tank / enclosed space if there is lack of oxygen or a dangerous atmosphere inside. Getting the person out must be priority number one.',
+ keyNote:'Don\'t enter before informing the Duty Officer and/or Master. Never take a stretcher inside where oxygen is low or the atmosphere is dangerous.',
+ instructions:'PRIORITY NUMBER ONE IS TO SAVE LIVES.\nThe location and other circumstances will decide what actions are taken to save the people from the enclosed space as safely and as quickly as possible.\nDo not enter the enclosed space before informing the Duty Officer and/or Master.',
+ teams:[T('Bridge Team',BRG,'Operation centre: central command and control.','MA','',[M('MA','In command of all operations.'),M('3O','Assist Master. Relieve Duty Officer and operate GMDSS equipment as per Master\'s instructions.'),M('J3O','Report to the Bridge. Assist Master. Prepare the contingency manuals.'),M('AB2','Helmsman.')]),
+ T('Team No. 1',FS1,'Put on fireman\'s outfit and smoke-diving equipment.\nPrimary task: perform rescue if emergency is on deck. Bring EEBD, additional CABA and torch light.\nSecondary task: assist Team No. 2 if emergency is in the engine room.','CO','',[M('CO','Team Leader. At scene of incident. Directs operations on deck or in accommodation.'),M('CDT','Assist Team Leader. Replace CABA bottles of smoke divers.'),M('DF','Smoke diver / rescuer.'),M('AB1','Smoke diver / rescuer.'),M('OS1','Assist Team Leader. Replace CABA bottles of smoke divers. Bring rescue equipment from fire station.'),M('OS2','Assist Team Leader. Replace CABA bottles of smoke divers. Bring rescue equipment from fire station.')]),
+ T('Team No. 2',FS2,'Put on fireman\'s outfit and smoke-diving equipment.\nPrimary task: perform rescue if emergency is in the engine room. Bring EEBD, additional CABA and torch light.\nSecondary task: assist Team No. 1 if emergency is in accommodation or deck area.','CE','',[M('CE','Team Leader. At scene of incident. Directs operations in engine spaces.'),M('3E','Smoke diver / rescuer.'),M('4E','Smoke diver / rescuer.'),M('OSMC','Assist as required. Replace CABA bottles of smoke divers. Bring rescue equipment from fire station.'),M('EF','Assist Team Leader. Replace CABA bottles of smoke divers.')]),
+ T('Technical Team',DES,'Bring equipment, shut ventilation and electrical connections.','ETO','',[M('ETO','Team Leader. Provide lighting and ventilation.'),M('AETO','Assist Electrician. Bring additional lighting and ventilation.'),M('BSN','Assist Electrician. Bring additional lighting and ventilation.')]),
+ T('First Aid Team',DES,FA_T,'2O','',[M('2O','Team Leader.'),M('CK','Assist first-aider. Bring defibrillator and stretcher (not to be carried inside the enclosed space).'),M('CA','Assist first-aider. Bring first aid equipment.')]),
+ T('Engine Room Team',ECR,ER_T,'2E','',[M('2E','Team Leader.'),M('MM','Assist Team Leader.')])]}),
+SC({name:'Helicopter operation',title:'Emergency plan: rescue by helicopter operation',fireStations:true,
+ keyNote:'Clear the landing or hoisting area of loose objects. Fire teams stand by with hoses rigged and hydrants open.',
+ teams:[T('Bridge Team',BRG,'Operation centre: central command and control.','MA','',[M('MA','Overall command. Keeps in contact with all teams.'),M('3O','Assist Master. Relieve Duty Officer and operate GMDSS equipment as per Master\'s instructions.'),M('J3O','Assist Master. Prepare the contingency manuals.'),M('AB2','Helmsman.')]),
+ T('Team No. 1',FS1,'Put on fireman\'s outfit and smoke-diving equipment.\nPrimary task: main fire-fighting and rescue team if aircraft crashes on deck.\nSecondary task: remove loose objects to prevent obstruction in the area.','CO','',[M('CO','Team Leader. At scene of incident. Directs operations on deck.'),M('CDT','Assist as required. Clear landing or hoisting area. Bring additional CABA bottles No. 1. Rig hose and open hydrant.'),M('DF','Smoke diver / rescuer.'),M('AB1','Smoke diver / rescuer.'),M('OS1','Assist as required. Clear landing or hoisting area. Bring rescue equipment from Fire Station No. 2. Rig hose and open hydrant.'),M('OS2','Assist as required. Clear landing or hoisting area. Bring additional CABA bottles No. 2. Rig hose and open hydrant. Hookman.')]),
+ T('Technical Team',DES,'Bring equipment, shut ventilation and electrical connections. Assist in rigging fire hoses.','ETO','',[M('ETO','Team Leader. Provide lighting and ventilation.'),M('AETO','Assist Electrician. Bring additional lighting and ventilation.'),M('BSN','Assist Electrician. Bring additional lighting and ventilation.')]),
+ T('First Aid Team',DES,FA_T+' Assist in rigging fire hoses.','2O','',[M('2O','Team Leader.'),M('CK','Assist first-aider. Bring defibrillator and stretcher.'),M('CA','Assist first-aider. Bring first aid equipment.')]),
+ T('Engine Room Team',ECR,'Primary task: meet at Engine Control Room. Man the engine room and await orders from the Bridge. Prepare for emergency manoeuvre.\nSecondary task: mobilise fire-fighting Team No. 2 (excluding 2nd Engineer and Motorman).','CE','',[M('CE','Team Leader. Stand by for Master\'s orders.'),M('2E','Assist Team Leader. Start emergency fire pump.'),M('3E','Assist Team Leader.'),M('4E','Assist Team Leader.'),M('EF','Assist as required.'),M('MM','Assist as required.')])]}),
+SC({name:'Loss of generator power',title:'Emergency plan – loss of generator power',
+ keyNote:'Deck lights on, anchors ready, survival craft prepared. Engine team musters in the ECR. Keep a sharp lookout.',teams:lossTeams()}),
+SC({name:'Loss of propulsion',title:'Emergency plan – loss of propulsion',
+ keyNote:'Deck lights on, anchors ready for immediate use, survival craft prepared. Engine team musters in the ECR. Keep a sharp lookout.',teams:lossTeams()})];
+const SEED=()=>({v:1,raftAuto:1,cardA:'Fire, abandon ship and rescue',
+ ship:{name:'M/V STAR KIRKENES',call:'LAHR7',port:'Bergen',imo:'9396127',rev:'01',approved:'Master'},
+ alarms:{general:'7 short + 1 long blast on the ship\'s alarm system, followed by announcement of the nature of the emergency on the PA system, by two-way radio and/or directly.',fire:'Continuous ringing of the ship\'s alarm system, followed by announcement on the PA system, by two-way radio and/or directly.',mob:'3 long blasts. If the person falls or is found in a congested traffic area, alert vessels in the vicinity.'},
+ general:'On hearing the GENERAL EMERGENCY ALARM, all crew, supernumeraries and visitors proceed to the Muster Station (C-Deck) wearing warm clothing and lifejacket, unless the announcement directs otherwise.\nOn hearing the FIRE ALARM, fire teams proceed to their fire stations: Team No. 1 to Fire Station No. 1, Team No. 2 to Fire Station No. 2. The First Aid Team and Technical Team muster where their Team Leader designates. The Engine Room Team goes to the Engine Control Room. All others go to the Muster Station.\nThe order to abandon ship is given verbally by the Master.\nReport any missing person to the Bridge immediately.\nEvery crew member shall know the location of their lifejacket, immersion suit, fire stations and emergency exits.',
+ locations:[CDECK,FS1,FS2,ECR,SOPEP,SGR,FCLE,BRG,RBS,DES],
+ equipment:{head:['Immersion suits','Lifejackets','Liferafts','GMDSS equipment'],rows:[['1st Deck: 16 port and 16 starboard','1st Deck: 16 port and 16 starboard','No. 1 and 2: starboard side (davit)','EPIRB: Bridge'],['3 forward','3 Bridge','No. 3 and 4: port side','SART: Bridge and free-fall lifeboat'],['3 Bridge','6 forward','No. 5: forward','Portable VHF: Bridge'],['2 Engine Control Room','3 Engine Control Room','','']]},
+ rafts:{port:'A-Deck, port side',stbd:'A-Deck, starboard side',notes:'Liferafts are prepared only on the Master\'s order. Muster with lifejacket and immersion suit. Liferafts are a separate survival craft from the freefall lifeboat.'},
+ boat:{name:'Freefall lifeboat',capacity:26,perRow:4,notes:'Board through the lifeboat entrance and fill forward seats first, taking your seat on the LEFT or RIGHT side as you board. Sit facing aft, fasten the harness and keep head and back firmly against the seat. Coxswain checks all persons are secured and reports to the Master before release.'},
+ roster:ROSTER.map((r,i)=>({...r,raft:r.id==='CO'?'P':'A',seat:r.id==='CO'?1:(i<1?2:i+(i<=1?1:1))})),scenarios:SCEN(),library:[]});
+
+/* ================= STATE ================= */
+const KEY='stationbill.v1';
+const clone=o=>JSON.parse(JSON.stringify(o));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
+/* Company procedure CON-SCM-GEN 0428 Rev 02 (Muster Instructions) */
+const MUSTER_NEW='Muster Station: C-Deck, next to the lifeboat';
+const PROC_LOCS=['Poop Deck','Hospital','Rescue Boat Deck','Scene of incident','Lookout position as posted by OOW'];
+function applyProc(D){
+ const ren=v=>v===CDECK?MUSTER_NEW:v;
+ D.locations=D.locations.map(ren);PROC_LOCS.forEach(l=>{if(!D.locations.includes(l))D.locations.push(l)});
+ D.scenarios.forEach(x=>{x.muster=ren(x.muster);x.teams.forEach(t=>t.muster=ren(t.muster))});
+ const fs=re=>D.scenarios.find(x=>re.test(x.name)),ft=(x,re)=>x&&x.teams.find(t=>re.test(t.name));
+ const REP=' The officer in charge reports attendance and anyone missing to the Bridge/Master.';
+ const fire=fs(/^fire/i);
+ if(fire){let t;
+  if(t=ft(fire,/team no\.? ?1/i)){t.muster=FS1;if(t.task.indexOf('officer in charge')<0)t.task+=REP.replace(' The',"\nThe")}
+  if(t=ft(fire,/team no\.? ?2/i)){t.muster=FS2;if(t.task.indexOf('officer in charge')<0)t.task+=REP.replace(' The',"\nThe")}
+  if(t=ft(fire,/technical/i)){t.muster='Poop Deck';t.task='Gather at the Poop Deck and report to the Bridge/Master whether all are present or anyone is missing. Stop and close mechanical and natural ventilation. Assist in rigging fire hoses.'}
+  if(t=ft(fire,/first aid/i)){t.muster='Hospital';t.task='Gather in the Hospital and report attendance and anyone missing to the Bridge/Master. Bring first aid equipment (stretcher, blankets, heart defibrillator, oxygen apparatus, first aid kit) to the location designated by the Master or the officer in charge of the operation.'}
+  if(t=ft(fire,/engine room/i)){t.muster=ECR;t.task='Gather in the Engine Control Room. Start and stop pumps and generators as required. Report to the Bridge/Master whether all are present or anyone is missing.'}}
+ const mob=fs(/man overboard/i);
+ if(mob){let t;if(mob.footer===GEN_FOOT)mob.footer='Decentralised mustering: time is crucial. Proceed directly to your team station to rescue the person from the sea as soon as possible and avoid hypothermia.';mob.muster='Decentralised mustering: proceed directly to your team station';
+  if((t=ft(mob,/bridge/i))&&t.task.indexOf('extra lookouts')<0)t.task+=' Post extra lookouts where appropriate.';
+  if(t=ft(mob,/preparation|launching/i)){t.muster='Rescue Boat Deck';if(t.task.indexOf('hand-held radio')<0)t.task+=' The rescue boat crane operator carries a hand-held radio for communication with the Bridge and the rescue boat team.'}
+  if(t=ft(mob,/rescue boat/i)){if(t.muster===RBS)t.muster='Rescue Boat Deck';if(t.task.indexOf('hand-held radio')<0)t.task+=' The rescue boat team carries a hand-held radio for communication with the Bridge and the crane operator.'}
+  if(t=ft(mob,/first aid/i)){t.muster='Rescue Boat Deck';t.task='Bring first aid equipment, heart defibrillator, stretcher and blankets to the rescue boat deck and prepare for the patient to arrive. Serve as additional lookouts.'}
+  if(t=ft(mob,/lookout/i)){t.muster='Lookout position as posted by OOW';if(t.task.indexOf('hand-held radio')<0)t.task+=' Lookouts on Monkey Island or other positions outside the bridge bring a hand-held radio for communication with the OOW.'}
+  if(t=ft(mob,/engine room/i)){if(!t.members.some(m=>/crane has the power/i.test(m.d)))['2E','3E','4E'].forEach(r=>t.members.push(M(r,'Ensure the rescue boat crane has the power required for operations.','on','Duty Engineer')))}}
+ const enc=fs(/enclosed space/i);
+ if(enc){let t;if(enc.footer===GEN_FOOT)enc.footer='Decentralised mustering: all teams and all available crew proceed directly to the scene.';enc.muster='Scene of incident';enc.unassigned='Extra hands: proceed to the scene to help bring the person out of the enclosed space (e.g. when a pulley is required).';
+  enc.keyNote='Raise the alarm and announce on the PA where the scene is. All teams proceed to the scene. Don\'t enter before informing the Duty Officer and/or Master. Never take a stretcher inside where oxygen is low or the atmosphere is dangerous.';
+  if(enc.instructions.indexOf('use the PA')<0)enc.instructions='OOW / Duty Officer or the person watching the incident: raise the alarm and use the PA to inform about the accident and where the scene is.\n\n'+enc.instructions;
+  if(t=ft(enc,/team no\.? ?1/i)){t.muster='Scene of incident';t.task='Smoke divers proceed to the scene, bringing extra CABAs and EEBD from Fire Station No. 1. Put on fireman\'s outfit and smoke-diving equipment, and bring a torch light.'}
+  if(t=ft(enc,/team no\.? ?2/i)){t.muster='Scene of incident';t.task='Smoke divers proceed to the scene, bringing extra CABAs and EEBD from Fire Station No. 2. Put on fireman\'s outfit and smoke-diving equipment, and bring a torch light.'}
+  if(t=ft(enc,/technical/i)){t.muster='Scene of incident';t.task='Proceed to the scene and assist as required with lighting, rescue lines and preparations in general.'}
+  if(t=ft(enc,/first aid/i)){t.muster='Scene of incident';t.task='Proceed to the scene bringing portable oxygen and heart defibrillator (the stretcher should already be on scene).'}}
+ const sop=fs(/sopep|oil spill/i);if(sop&&sop.instructions.indexOf('in accordance with SOPEP')<0)sop.instructions='The Oil Pollution Prevention Team musters in accordance with the SOPEP.\n\n'+sop.instructions;
+ D.scenarios.forEach(x=>{if(/abandon ship/i.test(x.name)){x.muster=MUSTER_NEW;if(x.instructions.indexOf('officer in charge reports')<0)x.instructions='Gather all crew at the Muster Station next to the lifeboat. The officer in charge reports to the Bridge/Master regarding attendees and whether anyone is missing.\n\n'+x.instructions}});
+ if(D.general===OLD_GENERAL)D.general=NEW_GENERAL;
+ D.proc0428=1}
+const OLD_GENERAL=SEED().general;
+const NEW_GENERAL='All vessels have ONE Muster Station, located next to the lifeboat (C-Deck).\nOn hearing the GENERAL EMERGENCY ALARM, all crew, supernumeraries and visitors proceed to the Muster Station wearing warm clothing and lifejacket, unless the announcement directs otherwise.\nOn hearing the FIRE ALARM: Team No. 1 and Team No. 2 gather at Fire Stations 1 and 2 to dress and prepare. The Technical Team gathers at the Poop Deck. The Engine Room Team gathers in the Engine Control Room. The First Aid Team gathers in the Hospital. Each officer in charge reports attendance and anyone missing to the Bridge/Master. All others go to the Muster Station.\nMAN OVERBOARD: decentralised mustering. Rescue boat team, crane operator and First Aid Team go to the rescue boat deck; lookouts go to positions posted by the OOW.\nRESCUE FROM ENCLOSED SPACE: all teams and all available crew proceed to the scene.\nOIL SPILL: the Oil Pollution Prevention Team musters in accordance with the SOPEP.\nABANDON SHIP: all crew gather at the Muster Station next to the lifeboat. The order to abandon ship is given verbally by the Master.\nReport any missing person to the Bridge immediately.';
+/* Company procedure ENV-POP-SOP 0095 Rev 02 (SOPEP oil pollution prevention team) */
+function applySop(D){
+ const x=D.scenarios.find(q=>/sopep|oil spill/i.test(q.name));
+ if(x){const t=x.teams.find(q=>/prevention/i.test(q.name))||x.teams[0];
+  if(t){t.members.forEach(m=>{
+   if(m.r==='MA'&&!m.l&&/overall in charge/i.test(m.d))m.d='In overall charge. Inform authorities (Port Control, USCG, etc.), vessel\'s agent and P&I representative. Advise the Company of the situation, ref. Company Contingency Plan. Update all concerned at regular intervals. Advise changes in status of emergency. Request assistance as deemed necessary.';
+   if(m.l==='Ratings on duty')m.d='If oil spill or leakage is detected, immediately alert the Duty Officer, Chief Engineer or Duty Engineer. Assist the Duty Officer.'});
+   if(!t.members.some(m=>/off-duty and on-duty/i.test(m.l)))['BSN','DF','AB1','AB2','OS1','OS2','OSMC','AETO','EF','MM','CK','CA'].forEach(r=>{if(D.roster.some(q=>q.id===r))t.members.push(M(r,'Report immediately to the Chief Officer. Don suitable outfit for clean-up.','','Ratings (off-duty and on-duty)'))})}
+  if(x.instructions.indexOf('Training and exercise')<0)x.instructions+='\n\nTraining and exercise: the team shall be trained in the use of the oil spill contingency equipment and absorbents on board, kept in designated locations. All exercises and training are logged in the oil pollution prevention drill records of the SOPEP, with entries in the deck log book including scenario and lessons learned.'}
+ D.sop0095=1}
+const DEFAULTS=SEED();applyProc(DEFAULTS);applySop(DEFAULTS);
+if(!S||!S.roster||!S.scenarios){S=clone(DEFAULTS);S.library=allDuties();}
+if(!S.proc0428){applyProc(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+if(!S.sop0095){applySop(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function allDuties(){const set=new Set(S.library||[]);S.scenarios.forEach(s=>s.teams.forEach(t=>t.members.forEach(m=>m.d&&set.add(m.d))));return [...set].sort()}
+if(!S.boat)S.boat=clone(DEFAULTS.boat);
+if(!S.rafts)S.rafts=clone(DEFAULTS.rafts);
+if(!S.cardA){S.cardA=DEFAULTS.cardA;const A=S.scenarios.filter(x=>x.group==='A').map(x=>x.name).sort().join('|');if(A===['Abandon ship – lifeboat','Abandon ship – liferaft','Fire'].sort().join('|'))S.scenarios.forEach(x=>{if(/^man overboard$|^enclosed space/i.test(x.name))x.group='A'})}
+if(S.boat&&S.boat.notes&&S.boat.notes.indexOf('Board through the stern hatch and fill forward seats first.')===0)S.boat.notes=S.boat.notes.replace('Board through the stern hatch and fill forward seats first.','Board through the lifeboat entrance and fill forward seats first, taking your seat on the LEFT or RIGHT side as you board.');
+if(!S.raftAuto){S.raftAuto=1;S.roster.forEach(r=>{r.raft=r.id==='CO'?'P':'A'})}
+if(!S.roster.some(r=>r.seat)){let n=2;S.roster.forEach(r=>{r.seat=r.id==='CO'?1:n++})}
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}const el=document.getElementById('saved');el.classList.add('on');setTimeout(()=>el.classList.remove('on'),900)},250)}
+const V={tab:'cards',rank:'AB1',card:'A',bill:null,rankEdit:null,scEdit:null};
+const rank=id=>S.roster.find(r=>r.id===id);
+const rn=id=>(rank(id)||{name:id}).name;
+const sc=id=>S.scenarios.find(s=>s.id===id);
+const shipIds=()=>[S.ship.call,S.ship.port,S.ship.imo?'IMO '+S.ship.imo:''].filter(Boolean).map(esc).join(' · ');
+
+/* ================= SIGNALS ================= */
+const RED='#d42a20';
+function sigSvg(kind){
+ if(kind==='fire')return `<svg viewBox="0 0 400 12" preserveAspectRatio="none"><rect x="0" y="2" width="400" height="8" rx="1.5" fill="${RED}"/></svg>`;
+ if(kind==='mob'){let r='';for(let i=0;i<3;i++)r+=`<rect x="${i*140}" y="2" width="120" height="8" rx="1.5" fill="${RED}"/>`;return `<svg viewBox="0 0 400 12" preserveAspectRatio="none">${r}</svg>`}
+ let r='';for(let i=0;i<7;i++)r+=`<rect x="${i*31}" y="2" width="20" height="8" rx="1.5" fill="${RED}"/>`;
+ return `<svg viewBox="0 0 400 12" preserveAspectRatio="none">${r}<rect x="232" y="2" width="168" height="8" rx="1.5" fill="${RED}"/></svg>`}
+function alarmBlock(kinds,genText){
+ const T={general:['General emergency alarm',genText||S.alarms.general],fire:['Fire alarm',S.alarms.fire],mob:['MOB secondary alarm',S.alarms.mob]};
+ return `<div class="alarm">${kinds.map(k=>`<div class="al"><h4>${T[k][0]}</h4>${sigSvg(k)}<p>${esc(T[k][1])}</p></div>`).join('')}</div>`}
+
+/* ================= CARDS ================= */
+function assignmentsFor(s,rid){
+ const out=[];
+ s.teams.forEach(t=>{t.members.forEach(m=>{if(m.r===rid)out.push({t,m})})});
+ const alts=s.teams.filter(t=>t.alt===rid);
+ return {out,alts}}
+function entryHTML(s,rid){
+ const {out,alts}=assignmentsFor(s,rid);
+ const rr=rank(rid)||{};
+ let items=out.map(({t,m})=>`<li><div class="tm">${(t.muster||s.muster)?`<span class="mb">${esc(shortLoc(t.muster||s.muster))}</span>`:''}${esc(t.name)}</div><div class="du">${/lifeboat/i.test(t.name+' '+s.name)&&rr.seat?`<span class="cd lbc">Seat ${esc(rr.seat)}, ${sideTxt(rr.seat).toLowerCase()}:</span> `:''}${/liferaft/i.test(t.name+' '+s.name)&&effRaft(rr)?`<span class="cd side${effRaft(rr)}">${raftName(effRaft(rr))} liferaft (${esc(raftLoc(effRaft(rr)))}):</span> `:''}${m.c?`<span class="cd">If ${m.c==='on'?'on watch':'off watch'}:</span> `:''}${esc(m.d)}</div></li>`);
+ alts.forEach(t=>{if(!out.some(o=>o.t===t&&/alternate|acts as team leader/i.test(o.m.d)))items.push(`<li><div class="tm">${(t.muster||s.muster)?`<span class="mb">${esc(shortLoc(t.muster||s.muster))}</span>`:''}Alternate leader · ${esc(t.name)}</div><div class="du">Acts as Team Leader if ${esc(rn(t.lead))} is unavailable.</div></li>`)});
+ if(!items.length)items=[`<li><div class="tm"><span class="mb">${esc(shortLoc(s.muster))}</span></div><div class="du">${esc(s.unassigned||DISP)}</div></li>`];
+ const rt=s.alarm==='fire'?`<span class="rt">Fire alarm</span>`:s.mobAlarm?`<span class="rt">${sigSvg('mob')}3 long: secondary</span>`:'';
+ return `<div class="en"><div class="enh"><span>${esc(s.name)}</span>${rt}</div><ol class="as${items.length===1?' one':''}">${items.join('')}</ol>${s.keyNote?`<div class="kn">${esc(s.keyNote)}</div>`:''}</div>`}
+const GREEN='#178a3a';
+const seatSide=n=>{n=+n;if(!n||n===1)return '';const per=Math.min(6,Math.max(2,+S.boat.perRow||4)),half=Math.ceil(per/2);return ((n-2)%per)<half?'L':'R'};
+const effRaft=r=>!r?'':r.raft==='A'?(seatSide(r.seat)==='L'?'S':seatSide(r.seat)==='R'?'P':''):(r.raft||'');
+const sideTxt=n=>+n===1?'Coxswain':seatSide(n)==='L'?'Left as you board':seatSide(n)==='R'?'Right as you board':'';
+function lbIcon(seat){const sd=seatSide(seat),OR='#E06A00',hl=sd==='L'?'R':sd==='R'?'L':'';const on=v=>hl===v?1:.18;
+ return `<svg viewBox="0 -24 100 174"><path d="M50 -22 V2" stroke="${OR}" stroke-width="6"/><path d="M40 -6 L50 6 L60 -6Z" fill="${OR}"/>
+ <path d="M50 146 C28 132 14 110 14 82 L14 14 Q14 6 24 6 L50 6Z" fill="${OR}" opacity="${on('L')}"/><path d="M50 146 C72 132 86 110 86 82 L86 14 Q86 6 76 6 L50 6Z" fill="${OR}" opacity="${on('R')}"/>
+ <path d="M50 146 C28 132 14 110 14 82 L14 14 Q14 6 24 6 L76 6 Q86 6 86 14 L86 82 C86 110 72 132 50 146Z" fill="none" stroke="#111" stroke-width="4"/><line x1="50" y1="6" x2="50" y2="146" stroke="#111" stroke-width="2"/>
+ ${seat?`<circle cx="${hl==='L'?32:hl==='R'?68:50}" cy="${hl?60:22}" r="11" fill="#fff" stroke="#111" stroke-width="3"/>`:''}</svg>`}
+function boatIcon(side){const on=v=>side===v?1:.15;
+ return `<svg viewBox="0 0 100 150"><path d="M50 4 C28 18 14 40 14 68 L14 136 Q14 146 24 146 L50 146Z" fill="${RED}" opacity="${on('P')}"/><path d="M50 4 C72 18 86 40 86 68 L86 136 Q86 146 76 146 L50 146Z" fill="${GREEN}" opacity="${on('S')}"/><path d="M50 4 C28 18 14 40 14 68 L14 136 Q14 146 24 146 L76 146 Q86 146 86 136 L86 68 C86 40 72 18 50 4Z" fill="none" stroke="#111" stroke-width="4"/><line x1="50" y1="6" x2="50" y2="146" stroke="#111" stroke-width="2"/>${side?`<circle cx="${side==='P'?32:68}" cy="92" r="11" fill="#fff" stroke="#111" stroke-width="3"/>`:''}</svg>`}
+const raftName=v=>v==='P'?'Port':v==='S'?'Starboard':'';const raftLoc=v=>v==='P'?S.rafts.port:v==='S'?S.rafts.stbd:'';
+const shortLoc=l=>{l=String(l||'');const i=l.indexOf(':');if(i<0)return l;const a=l.slice(0,i).trim(),b=l.slice(i+1).trim();return /^muster station$/i.test(a)?b.replace(/\s*\(.*\)/,''):a}
+function cardHTML(rid,g){
+ const list=S.scenarios.filter(s=>s.group===g);
+ const kinds=['general'];if(list.some(s=>s.alarm==='fire'))kinds.push('fire');
+ const r=rank(rid);
+ let body;
+ if(g==='B'){const h=Math.ceil(list.length/2);body=`<div class="cols"><div class="col">${list.slice(0,h).map(s=>entryHTML(s,rid)).join('')}</div><div class="col">${list.slice(h).map(s=>entryHTML(s,rid)).join('')}</div></div>`}
+ else body=list.map(s=>entryHTML(s,rid)).join('');
+ const rows='<tr><td style="height:13mm"></td><td></td></tr>';
+ return `<div class="a4 card" data-rank="${esc(rid)}" data-g="${g}">
+ ${g==='A'?`<div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div><div class="k" style="font:700 12pt var(--cond);letter-spacing:.4px;margin-top:2mm">EMERGENCY DUTY CARD A</div><div class="ids">${esc(S.cardA||'Fire, abandon ship and rescue')}${r&&r.watch?' · Watchkeeper':''}</div><div class="rank">${esc(r?r.name:rid)}</div></div>
+ <div class="phr"><div class="grp"><div class="bicon lb">${lbIcon(r&&r.seat)}<small>Lifeboat<br>faces aft</small></div><div class="seat LB"><small>Lifeboat seat</small><b>${r&&r.seat?esc(r.seat):'–'}</b><small>${r&&r.seat?sideTxt(r.seat):''}</small></div></div><div class="grp"><div class="bicon">${boatIcon(effRaft(r))}<small class="${effRaft(r)?'side'+effRaft(r):''}">${effRaft(r)?(effRaft(r)==='P'?'Go port':'Go stbd'):'No raft'}</small></div><div class="seat raft ${effRaft(r)||'N'}"><small>Liferaft</small><b>${effRaft(r)?(effRaft(r)==='P'?'PORT':'STBD'):'–'}</b><i>${effRaft(r)?esc(shortLoc(raftLoc(effRaft(r))).split(',')[0]):''}</i></div></div></div></div>`:`<div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div>
+ <div class="phr"><div class="ttl"><div class="k">EMERGENCY DUTY CARD ${g}</div><div class="s2">${g==='A'?'Fire and abandon ship':'Other emergencies'}${r&&r.watch?' · Watchkeeper':''}</div><div class="rank">${esc(r?r.name:rid)}</div></div></div></div>`}
+ ${alarmBlock(kinds)}
+ <div class="cbody">${body||'<p>No scenarios in this card group.</p>'}</div>
+ <div class="sigw"><div class="st">I have read and understood my emergency duties.</div>
+ <table class="sg"><colgroup><col style="width:30%"><col></colgroup><tr><th>Sign-on date</th><th>Signature over printed rank and name</th></tr>${rows}</table></div>
+ <div class="pf"><span>Rev ${esc(S.ship.rev)} · Approved by ${esc(S.ship.approved)}</span><span>Card ${g} of 2</span></div></div>`}
+function balance(el){const cs=el.querySelectorAll('.col');if(cs.length<2)return;const[c1,c2]=cs;while(c2.firstElementChild)c1.appendChild(c2.firstElementChild);
+ const en=[...c1.children],hs=en.map(e=>e.offsetHeight),tot=hs.reduce((a,b)=>a+b,0);let best=0,bv=1e9,acc=0;for(let k=0;k<=en.length;k++){const v=Math.max(acc,tot-acc);if(v<bv){bv=v;best=k}acc+=hs[k]||0}en.slice(best).forEach(e=>c2.appendChild(e))}
+function fitCard(el){
+ el.classList.remove('f1','f2','f3','f4');
+ const over=()=>{balance(el);const b=el.querySelector('.cbody');if(!b)return false;if(b.scrollHeight>b.clientHeight+1)return true;return [...b.querySelectorAll('.col')].some(c=>c.scrollHeight>c.clientHeight+1)};
+ if(!over())return true;el.classList.add('f1');if(!over())return true;el.classList.add('f2');if(!over())return true;el.classList.add('f3');if(!over())return true;el.classList.add('f4');return !over()}
+
+/* ================= STATION BILLS ================= */
+function teamRows(t){
+ const rows=[],seen={};
+ t.members.forEach(m=>{
+  const key=m.l?('L|'+m.l+'|'+m.d+'|'+m.c):('R|'+m.r+'|'+m.d+'|'+m.c);
+  if(m.l&&seen[key]){seen[key].ranks.push(m.r);return}
+  const row={m,ranks:[m.r]};if(m.l)seen[key]=row;rows.push(row)});
+ return rows.map(({m,ranks})=>{
+  const lead=!m.l&&m.r===t.lead;
+  let pos=m.l?`${esc(m.l)}<span class="rs">${ranks.map(rn).map(esc).join(', ')}${m.c?' · '+(m.c==='on'?'on watch':'off watch'):''}</span>`:esc(rn(m.r))+(m.c?`<span class="rs">${m.c==='on'?'If on watch':'If off watch'}</span>`:'');
+  if(lead&&t.alt)pos+=`<span class="alt">Alt: ${esc(rn(t.alt))}</span>`;
+  return `<tr><td class="${lead?'ld':''}">${pos}</td><td class="${lead?'ld':''}">${esc(m.d)}</td></tr>`}).join('')}
+function billHTML(s){
+ const kinds=[s.alarm==='fire'?'fire':'general'];if(s.mobAlarm)kinds.push('mob');
+ const assigned=new Set();s.teams.forEach(t=>t.members.forEach(m=>assigned.add(m.r)));
+ const un=S.roster.filter(r=>!assigned.has(r.id));
+ const fs=S.locations.filter(l=>/^fire station/i.test(l));
+ const eq=S.equipment;
+ return `<div class="a4 bill">
+ <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">STATION BILL · MUSTER LIST</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
+ <div class="band">${esc(s.title||s.name)}</div>
+ ${alarmBlock(kinds,s.alarmText)}
+ <div class="mbig"><div class="l">Muster<br>station</div><div class="v">${esc(s.muster)}${s.alarm==='fire'?'<div style="font:500 9.5pt var(--sans);text-transform:none">Fire teams proceed to their fire stations</div>':''}</div></div>
+ ${s.fireStations?`<div class="meta">${fs.map(f=>`<div><b>${esc(f.split(':')[0])}:</b> ${esc(f.split(':').slice(1).join(':'))}</div>`).join('')}</div>`:''}
+ ${/liferaft/i.test(s.name+' '+s.title)?`<div class="meta"><div><b>Port liferaft:</b> ${esc(S.rafts.port)} · ${S.roster.filter(r=>effRaft(r)==='P').length} crew</div><div><b>Starboard liferaft:</b> ${esc(S.rafts.stbd)} · ${S.roster.filter(r=>effRaft(r)==='S').length} crew</div></div>`:''}
+ ${s.immediate?`<div class="imm"><b>IMMEDIATE ACTION:</b> ${esc(s.immediate)}</div>`:''}
+ ${s.teams.map(t=>`<div class="tb"><div class="tbh">${esc(t.name)}<span><span class="tm2">${esc(shortLoc(t.muster||s.muster))}</span>${t.lead?' Leader: '+esc(rn(t.lead)):''}</span></div>${t.task?`<div class="tbt">${esc(t.task)}</div>`:''}<table class="dt"><tr><th>Position</th><th>Duties</th></tr>${teamRows(t)}</table></div>`).join('')}
+ <div class="un"><b>ALL OTHER CREW:</b> ${un.length?un.map(r=>esc(r.name)).join(', ')+' — ':''}${esc(s.unassigned||DISP)}</div>
+ ${s.instructions?`<div class="ins"><h5>Instructions</h5>${esc(s.instructions)}</div>`:''}
+ ${s.equipment?`<div class="ins"><h5>Location of equipment</h5><table class="eq"><tr>${eq.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${eq.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>`:''}
+ <div class="foot">${esc(s.footer||GEN_FOOT)}</div></div>`}
+function generalHTML(){
+ const fs=S.locations.filter(l=>/^fire station/i.test(l));
+ return `<div class="a4 bill">
+ <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">SOLAS CH. III REG. 8 AND 37</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
+ <div class="band">General emergency instructions</div>
+ ${alarmBlock(['general','fire','mob'])}
+ <div class="ins"><h5>On hearing the alarm</h5>${esc(S.general)}</div>
+ <div class="ins"><h5>Fire stations</h5>${fs.map(esc).join('\n')}</div>
+ <div class="tb"><table class="dt"><tr><th>Emergency</th><th>Alarm · muster / assembly</th></tr>${S.scenarios.map(s=>`<tr><td class="ld">${esc(s.name)}</td><td>${s.alarm==='fire'?'Fire alarm':'General alarm'}${s.mobAlarm?' (+ 3 long)':''} · ${esc(s.muster)}</td></tr>`).join('')}</table></div>
+ <div class="ins"><h5>Location of equipment</h5><table class="eq"><tr>${S.equipment.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${S.equipment.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>
+ <div class="foot">Approved by ${esc(S.ship.approved)} · Duty cards in each cabin show individual duties by rank</div></div>`}
+
+/* ================= LIFEBOAT SEAT PLAN ================= */
+const seatOf=n=>S.roster.find(r=>+r.seat===n);
+function wrapName(t,max){const w=String(t).split(/\s+/),L=[];let c='';w.forEach(x=>{if((c+' '+x).trim().length>max&&c){L.push(c);c=x}else c=(c+' '+x).trim()});if(c)L.push(c);if(L.length>2){L[1]=L.slice(1).join(' ');L.length=2;if(L[1].length>max)L[1]=L[1].slice(0,max-1)+'…'}return L}
+function boatSvg(){
+ const cap=Math.max(2,+S.boat.capacity||26),per=Math.min(6,Math.max(2,+S.boat.perRow||4)),rows=Math.ceil((cap-1)/per);
+ const aisle=28,gap=6,sw=Math.min(110,(470-aisle-gap*(per-2))/per),sh=70,rh=80,half=Math.ceil(per/2);
+ const OR='#E06A00',tw=per*sw+(per-2)*gap+aisle,x0=300-tw/2,top=200,cy=top+rows*rh+20,H=cy+200;
+ const sx=i=>x0+i*(sw+gap)+(i>=half?aisle-gap:0);
+ let g=`<path d="M300 18 C455 55 560 135 572 ${top} L572 ${H-70} Q572 ${H-22} 524 ${H-22} L76 ${H-22} Q28 ${H-22} 28 ${H-70} L28 ${top} C40 135 145 55 300 18Z" fill="#f1f1f1" stroke="#111" stroke-width="4"/>`;
+ g+=`<text x="300" y="80" text-anchor="middle" font-size="20" font-weight="700" fill="#111">BOW</text><text x="300" y="58" text-anchor="middle" font-size="12" fill="#444">(points aft of the ship)</text><text x="64" y="${top-30}" font-size="15" font-weight="700" fill="${OR}">← LEFT as you board</text><text x="64" y="${top-12}" font-size="12" font-weight="600" fill="${GREEN}">Ship's stbd side · stbd liferaft</text><text x="536" y="${top-30}" text-anchor="end" font-size="15" font-weight="700" fill="${OR}">RIGHT as you board →</text><text x="536" y="${top-12}" text-anchor="end" font-size="12" font-weight="600" fill="${RED}">Ship's port side · port liferaft</text><path d="M300 92 l-10 18 h20z" fill="#111" transform="rotate(180 300 101)"/>`;
+ const seat=(x,y,w,n,cox)=>{const r=seatOf(n);const lines=r?wrapName((String(r.name).match(/\(([^)]+)\)/)||[])[1]||r.name,w>130?20:w>95?11:8):['Spare'];const cx=x+30+(w-34)/2;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${sh}" rx="6" fill="#fff" stroke="${cox?'#d42a20':'#111'}" stroke-width="${cox?3:1.6}"/><rect x="${x+3}" y="${y+3}" width="${w-6}" height="7" rx="2" fill="#111"/>
+  <text x="${x+7}" y="${y+33}" font-size="19" font-weight="700" fill="${cox?'#111':OR}">${n}</text>
+  ${lines.map((l,i)=>`<text x="${cx}" y="${y+(lines.length>1?36:44)+i*16}" text-anchor="middle" font-size="${w>95?13:11}" font-weight="${r?600:400}" fill="${r?'#111':'#999'}">${esc(l)}</text>`).join('')}`};
+ let n=2;for(let row=0;row<rows;row++)for(let i=0;i<per&&n<=cap;i++,n++)g+=seat(sx(i),top+row*rh,sw,n);
+ g+=seat(300-85,cy+18,170,1,1)+`<text x="300" y="${cy+12}" text-anchor="middle" font-size="14" font-weight="700" fill="#d42a20">COXSWAIN</text>`;
+ g+=`<rect x="215" y="${H-64}" width="170" height="34" rx="4" fill="${OR}" stroke="#111" stroke-width="2"/><text x="300" y="${H-41}" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">LIFEBOAT ENTRANCE</text>
+ <path d="M300 ${H+28} V${H-12}" stroke="${OR}" stroke-width="7"/><path d="M286 ${H-8} L300 ${H-26} L314 ${H-8}Z" fill="${OR}"/>
+ <path d="M282 ${H-72} C240 ${H-95} 200 ${H-112} 150 ${H-125}" fill="none" stroke="${OR}" stroke-width="4"/><path d="M146 ${H-136} L136 ${H-122} L154 ${H-118}Z" fill="${OR}"/>
+ <path d="M318 ${H-72} C360 ${H-95} 400 ${H-112} 450 ${H-125}" fill="none" stroke="${OR}" stroke-width="4"/><path d="M454 ${H-136} L464 ${H-122} L446 ${H-118}Z" fill="${OR}"/>
+ <text x="110" y="${H-82}" font-size="13" font-weight="700" fill="${OR}">LEFT</text><text x="490" y="${H-82}" text-anchor="end" font-size="13" font-weight="700" fill="${OR}">RIGHT</text>`;
+ return `<svg viewBox="0 0 600 ${H+32}" font-family="Barlow,'Avenir Next Condensed','Arial Narrow',Arial,sans-serif">${g}</svg>`}
+function seatPlanHTML(){
+ const cap=Math.max(2,+S.boat.capacity||26);let rows='';for(let n=1;n<=cap;n++){const r=seatOf(n);const er=r?effRaft(r):'';rows+=`<tr class="${r?'':'sp0'}"><td style="color:${n===1?'#111':'#E06A00'}">${n}</td><td>${r?esc(r.name):'Spare'}</td><td style="font-size:8.5pt">${n===1?'Coxswain':seatSide(n)==='L'?'Left':'Right'}</td><td style="font-size:8.5pt;font-weight:700;color:${er==='P'?RED:er==='S'?GREEN:'#888'}">${er==='P'?'Port':er==='S'?'Stbd':'–'}</td></tr>`}
+ const none=S.roster.filter(r=>!r.seat||+r.seat>cap);
+ return `<div class="a4 bill">
+ <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">LIFEBOAT SEAT ALLOCATION</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
+ <div class="band">${esc(S.boat.name)} · ${cap} persons</div>
+ ${alarmBlock(['general'],BOAT_AL)}
+ <div class="sp"><div>${boatSvg()}<div class="ids" style="text-align:center">Seen as you board through the lifeboat entrance. The boat faces aft: its left side is the ship's starboard side.</div></div>
+ <div><table class="st"><colgroup><col style="width:10mm"><col><col style="width:14mm"><col style="width:12mm"></colgroup><tr><th>Seat</th><th>Rank</th><th>Side</th><th>Raft</th></tr>${rows}</table>${none.length?`<p class="ids"><b>No seat:</b> ${none.map(r=>esc(r.name)).join(', ')}</p>`:''}</div></div>
+ ${S.boat.notes?`<div class="ins"><h5>Boarding</h5>${esc(S.boat.notes)}</div>`:''}
+ <div class="foot">Each crew member's seat number is shown on Emergency Duty Card A</div></div>`}
+function raftPageHTML(){
+ const col=v=>{const L=S.roster.filter(r=>effRaft(r)===v);return `<div class="bx ${v}"><h4>${v==='P'?'Port':'Starboard'} liferaft</h4><div class="loc">${esc(raftLoc(v))} · ${L.length} crew</div><ol>${L.map(r=>`<li>${esc(r.name)}${r.seat?` <span style="color:#666;font-size:9pt">· lifeboat seat ${esc(r.seat)}</span>`:''}</li>`).join('')||'<li>None</li>'}</ol></div>`};
+ const none=S.roster.filter(r=>!effRaft(r));
+ return `<div class="a4 bill">
+ <div class="ph"><div><div class="ship">${esc(S.ship.name)}</div><div class="ids">${shipIds()}</div></div><div class="ttl"><div class="k">LIFERAFT ALLOCATION</div><div class="s2">Rev ${esc(S.ship.rev)}</div></div></div>
+ <div class="band">Liferaft allocation</div>
+ ${alarmBlock(['general'],BOAT_AL)}
+ <div class="rf">${col('P')}${col('S')}</div>
+ ${none.length?`<p class="ids"><b>No liferaft:</b> ${none.map(r=>esc(r.name)).join(', ')}</p>`:''}
+ ${S.rafts.notes?`<div class="ins"><h5>Notes</h5>${esc(S.rafts.notes)}</div>`:''}
+ <div class="foot">Each crew member's liferaft side is shown on Emergency Duty Card A</div></div>`}
+function raftEditor(){
+ return `<div class="panel"><h3>Liferaft locations</h3><label class="f">Port liferaft</label><input data-set="rafts" data-f="port" value="${esc(S.rafts.port)}"><label class="f">Starboard liferaft</label><input data-set="rafts" data-f="stbd" value="${esc(S.rafts.stbd)}"><label class="f">Notes</label><textarea data-set="rafts" data-f="notes">${esc(S.rafts.notes)}</textarea></div>
+ <div class="panel"><h3>Crew allocation</h3><p class="hint">Auto: left side of the lifeboat goes to the starboard liferaft, right side to the port liferaft (the boat faces aft). The coxswain needs a manual choice.</p><p class="hint">Port ${S.roster.filter(r=>effRaft(r)==='P').length} · Starboard ${S.roster.filter(r=>effRaft(r)==='S').length}</p>
+ ${S.roster.map(r=>`<div class="row" style="margin:6px 0"><span style="flex:1 1 50%;font-weight:600">${esc(r.name)}</span><select data-f="raft" data-r="${esc(r.id)}" style="flex:1 1 40%">${opt('A','Auto: from lifeboat seat'+(r.raft==='A'&&effRaft(r)?' ('+raftName(effRaft(r))+')':''),r.raft||'')}${opt('','None',r.raft||'')}${opt('P','Port',r.raft||'')}${opt('S','Starboard',r.raft||'')}</select></div>`).join('')}</div>`}
+function assignSeat(rid,n){S.roster.forEach(r=>{if(n&&+r.seat===n&&r.id!==rid)r.seat=''});const r=rank(rid);if(r)r.seat=n||''}
+
+/* ================= PREVIEW + PRINT ================= */
+const pv=h=>`<div class="pvw"><div class="pvs">${h}</div></div>`;
+function layoutPreviews(){
+ document.querySelectorAll('#view .pvw').forEach(w=>{const pg=w.querySelector('.a4');if(!pg)return;
+  if(pg.classList.contains('card')){const ok=fitCard(pg);const warn=w.previousElementSibling;if(warn&&warn.classList.contains('fitw'))warn.hidden=ok}
+  const s=w.clientWidth/pg.offsetWidth;w.firstElementChild.style.transform=`scale(${s})`;w.style.height=(pg.offsetHeight*s)+'px'})}
+addEventListener('resize',()=>requestAnimationFrame(layoutPreviews));
+let DL=null;try{window.claude&&window.claude.use&&window.claude.use('downloads').then(d=>{DL=d;render(true)}).catch(()=>{})}catch(e){}
+const framed=(()=>{try{return window.self!==window.top}catch(e){return true}})();
+const fname=t=>String(t).replace(/[^\w\-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+function note(msg){let n=document.getElementById('note');if(!n){n=document.createElement('div');n.id='note';n.className='warn';n.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(70px + env(safe-area-inset-bottom));z-index:9;background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.2)';document.body.appendChild(n)}n.textContent=msg;n.hidden=false;clearTimeout(n._t);n._t=setTimeout(()=>n.hidden=true,6000)}
+async function doPrint(pages,label){
+ const P=document.getElementById('print');P.innerHTML=pages.join('');
+ P.querySelectorAll('.a4.card').forEach(fitCard);
+ if(framed&&DL){
+  const css=document.querySelector('style').textContent;
+  const html='<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(label||'Print')+'</title><link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet"><style>'+css+'\n@media screen{body{background:#9aa0a6;padding:8px}#print{position:static;width:210mm;margin:0 auto}.a4{margin:0 auto 10px;box-shadow:0 2px 8px rgba(0,0,0,.3)}}</style></head><body><div id="print">'+P.innerHTML+'</div><script>addEventListener("load",function(){setTimeout(function(){window.print()},600)})<\/script></body></html>';
+  P.innerHTML='';
+  try{await DL.save({filename:fname((label||'print')+' '+S.ship.name)+'.html',data:html});note('Print file saved. Open it in Safari or Chrome; the print screen opens by itself. Choose Print or Save as PDF.')}catch(e){note('The file was not saved. Tap the button again to retry.')}
+  return}
+ if(framed){P.innerHTML='';note('Printing is not available inside this viewer. Open the app file in Safari or Chrome to print.');return}
+ setTimeout(()=>{try{window.print()}catch(e){}},80)}
+addEventListener('afterprint',()=>{document.getElementById('print').innerHTML=''});
+const allCards=()=>S.roster.flatMap(r=>[cardHTML(r.id,'A'),cardHTML(r.id,'B')]);
+const allBills=()=>[generalHTML(),seatPlanHTML(),raftPageHTML(),...S.scenarios.map(billHTML)];
+const fitWarn='<div class="warn fitw" hidden>This card is too long for one A4 page. Shorten the longest key notes or duties in Drills.</div>';
+
+/* ================= VIEWS ================= */
+const opt=(v,l,sel)=>`<option value="${esc(v)}"${v===sel?' selected':''}>${esc(l)}</option>`;
+const rankOpts=(sel,blank)=>(blank?opt('',blank,sel):'')+S.roster.map(r=>opt(r.id,r.name,sel)).join('');
+function vCards(){
+ if(!rank(V.rank))V.rank=(S.roster[0]||{}).id;
+ const r=V.rank;
+ const pages=V.card==='both'?[cardHTML(r,'A'),cardHTML(r,'B')]:[cardHTML(r,V.card)];
+ return `<h2>Cabin duty cards</h2>
+ <div class="panel"><label class="f" for="rk">Rank</label><select id="rk" data-act="pickRank">${rankOpts(r)}</select>
+ <div style="margin-top:10px" class="seg">${['A','B','both'].map(k=>`<button data-act="card" data-v="${k}" class="${V.card===k?'on':''}">${k==='both'?'Both':'Card '+k}</button>`).join('')}</div>
+ <div class="actions"><button class="b p" data-act="printCard">${framed?"Save print file":"Print this rank"}</button><button class="b" data-act="printAllCards">Print all ranks (${S.roster.length*2} pages)</button><button class="b" data-act="editRank" data-r="${esc(r)}">Edit duties</button></div>
+ <p class="hint">Card A: ${esc(S.cardA)}. Card B: other emergencies. Rank only, no names. Crew sign by hand.</p></div>
+ ${pages.map(p=>fitWarn+pv(p)).join('')}`}
+function vBills(){
+ const ids=['general','seats','rafts',...S.scenarios.map(s=>s.id)];if(!ids.includes(V.bill))V.bill=S.scenarios[0]?S.scenarios[0].id:'general';
+ const page=V.bill==='general'?generalHTML():V.bill==='seats'?seatPlanHTML():V.bill==='rafts'?raftPageHTML():billHTML(sc(V.bill));
+ return `<h2>Station bills</h2>
+ <div class="panel"><label class="f" for="bl">Scenario</label><select id="bl" data-act="pickBill">${opt('general','General emergency instructions (all crew)',V.bill)}${opt('seats','Lifeboat seat allocation',V.bill)}${opt('rafts','Liferaft allocation',V.bill)}${S.scenarios.map(s=>opt(s.id,s.name,V.bill)).join('')}</select>
+ <div class="actions"><button class="b p" data-act="printBill">${framed?"Save print file":"Print this list"}</button><button class="b" data-act="printAllBills">Print all lists</button><button class="b" data-act="printEverything">Print everything</button></div>
+ <p class="hint">Built live from the crew roster. Ranks without a role appear under "All other crew".</p></div>
+ ${pv(page)}${V.bill==='seats'?seatEditor():V.bill==='rafts'?raftEditor():''}`}
+function seatEditor(){
+ const cap=Math.max(2,+S.boat.capacity||26);let list='';
+ for(let n=1;n<=cap;n++){const r=seatOf(n);list+=`<div class="row" style="margin:6px 0"><span class="badge" style="flex:0 0 52px;text-align:center;font-size:15px;color:var(--red)">${n}</span><select data-act="seat" data-n="${n}" aria-label="Seat ${n}">${rankOpts(r?r.id:'','Spare')}</select></div>`}
+ return `<div class="panel"><h3>Edit lifeboat</h3><label class="f">Lifeboat name</label><input data-set="boat" data-f="name" value="${esc(S.boat.name)}">
+ <div class="row"><div><label class="f">Capacity (persons)</label><input type="number" min="2" max="60" data-set="boat" data-f="capacity" data-re="1" value="${esc(S.boat.capacity)}"></div><div><label class="f">Seats across per row</label><select data-set="boat" data-f="perRow">${[2,3,4,5,6].map(v=>opt(String(v),String(v),String(S.boat.perRow))).join('')}</select></div></div>
+ <label class="f">Boarding notes</label><textarea data-set="boat" data-f="notes">${esc(S.boat.notes)}</textarea></div>
+ <div class="panel"><h3>Seats</h3><p class="hint">Seat 1 is the coxswain. Choosing a rank moves it from its old seat.</p>${list}
+ <div class="actions"><button class="b" data-act="autoSeat">Fill in roster order</button></div></div>`}
+function vRanks(){
+ if(V.rankEdit&&rank(V.rankEdit))return vRankEdit(V.rankEdit);
+ return `<h2>Crew roster</h2>
+ <div class="panel"><h3>Add a rank</h3><div class="row"><input id="nrName" placeholder="2nd Cook"><select id="nrDept">${['Deck','Engine','Catering','Other'].map(d=>opt(d,d,'Deck')).join('')}</select><button class="b p" data-act="addRank" style="flex:0 0 auto">Add rank</button></div><p class="hint">New ranks open in the duty editor so you can set a duty for each drill.</p></div>
+ <div class="panel"><div class="list">${S.roster.map((r,i)=>`<div class="li"><div class="grow"><input value="${esc(r.name)}" data-f="name" data-r="${esc(r.id)}" aria-label="Rank name"><div class="row" style="margin-top:6px"><select data-f="dept" data-r="${esc(r.id)}" aria-label="Department">${['Deck','Engine','Catering','Other'].map(d=>opt(d,d,r.dept)).join('')}</select><label class="row" style="flex:0 0 auto;gap:6px"><input type="checkbox" data-f="watch" data-r="${esc(r.id)}"${r.watch?' checked':''}>Watchkeeper</label></div></div>
+ <div style="display:grid;gap:6px;flex:0 0 auto"><button class="b s" data-act="editRank" data-r="${esc(r.id)}">Duties</button><div class="row" style="gap:4px"><button class="b s" data-act="mvRank" data-r="${esc(r.id)}" data-d="-1" aria-label="Move up"${i?'':' disabled'}>↑</button><button class="b s" data-act="mvRank" data-r="${esc(r.id)}" data-d="1" aria-label="Move down"${i<S.roster.length-1?'':' disabled'}>↓</button></div><button class="b s d" data-act="delRank" data-r="${esc(r.id)}">Delete</button></div></div>`).join('')}</div></div>`}
+function dutyList(s){const own=new Set();s.teams.forEach(t=>t.members.forEach(m=>m.d&&own.add(m.d)));const rest=allDuties().filter(d=>!own.has(d));return [...own,...rest]}
+function datalists(scs){return scs.map(s=>`<datalist id="dl-${esc(s.id)}">${dutyList(s).map(d=>`<option value="${esc(d)}">`).join('')}</datalist>`).join('')}
+const locList=()=>`<datalist id="dlLoc">${S.locations.map(l=>`<option value="${esc(l)}">`).join('')}</datalist>`;
+const condSel=(m,ds)=>`<select data-f="c" ${ds} aria-label="Watch condition">${opt('','Always',m.c)}${opt('on','If on watch',m.c)}${opt('off','If off watch',m.c)}</select>`;
+function vRankEdit(rid){
+ const r=rank(rid);
+ return `<div class="actions"><button class="b" data-act="back">← Crew roster</button><button class="b p" data-act="genCard" data-r="${esc(rid)}">Generate duty cards</button></div>
+ <h2>${esc(r.name)} · duties</h2>
+ <div class="panel"><div class="row"><label class="f" style="flex:0 0 100%;margin:0">Liferaft (shows on Card A)</label><select data-f="raft" data-r="${esc(rid)}">${opt('A','Auto: from lifeboat seat'+(r.raft==='A'&&effRaft(r)?' ('+raftName(effRaft(r))+')':''),r.raft||'')}${opt('','None',r.raft||'')}${opt('P','Port · '+S.rafts.port,r.raft||'')}${opt('S','Starboard · '+S.rafts.stbd,r.raft||'')}</select></div></div>
+ <div class="panel"><div class="row"><label class="f" style="flex:0 0 100%;margin:0">Lifeboat seat (shows on Card A)</label><select data-act="rankSeat" data-r="${esc(rid)}">${opt('','No seat',String(r.seat||''))}${Array.from({length:Math.max(2,+S.boat.capacity||26)},(_,i)=>i+1).map(n=>{const o=seatOf(n);return opt(String(n),n+(n===1?' · coxswain':'')+(o&&o.id!==rid?' · now '+o.name:''),String(r.seat||''))}).join('')}</select></div></div>
+ <p class="hint">Pick a duty from the list or type a new one. New duties are saved to the duty library. Changes save automatically.</p>
+ ${datalists(S.scenarios)}
+ ${S.scenarios.map(s=>{
+  const items=[];s.teams.forEach((t,ti)=>t.members.forEach((m,mi)=>{if(m.r===rid)items.push({t,ti,m,mi})}));
+  const ds=(ti,mi)=>`data-s="${esc(s.id)}" data-t="${ti}" data-m="${mi}"`;
+  const leadOf=s.teams.findIndex(t=>t.lead===rid),altOf=s.teams.findIndex(t=>t.alt===rid);
+  const teamOpts=(sel,blank)=>(blank?opt('-1',blank,String(sel)):'')+s.teams.map((t,i)=>opt(String(i),t.name,String(sel))).join('');
+  return `<div class="panel"><div class="row" style="justify-content:space-between"><h3 style="flex:1">${esc(s.name)}</h3><span class="badge" style="flex:0 0 auto">Card ${s.group}</span></div>
+  ${items.length?'':`<p class="hint">No role: prints "${esc(s.unassigned||DISP)}"</p>`}
+  ${items.map(({t,ti,m,mi},k)=>`<div class="assign"><div class="row"><select data-act="mvTeam" ${ds(ti,mi)} aria-label="Team">${teamOpts(ti)}</select>${condSel(m,ds(ti,mi))}</div>
+   <div class="hint" style="margin-top:4px">Muster: ${esc(t.muster||s.muster)}</div>
+   <input list="dl-${esc(s.id)}" value="${esc(m.d)}" data-f="d" ${ds(ti,mi)} placeholder="Choose or type a duty" style="margin-top:6px" aria-label="Duty">
+   <div class="row" style="margin-top:6px"><button class="b s d" data-act="delMem" ${ds(ti,mi)} style="flex:0 0 auto">Remove role</button></div></div>`).join('')}
+  <div class="row" style="margin-top:8px">${s.teams.length?`<select id="add-${esc(s.id)}" aria-label="Team for new role">${teamOpts(0)}</select><button class="b s" data-act="addRole" data-s="${esc(s.id)}" data-r="${esc(rid)}" style="flex:0 0 auto">+ Add ${items.length?'second ':''}role</button>`:'<p class="hint">This drill has no teams yet. Add one in Drills.</p>'}</div>
+  ${s.teams.length?`<div class="row" style="margin-top:8px"><label class="hint" style="flex:0 0 100%">Team Leader of</label><select data-act="setLead" data-s="${esc(s.id)}" data-r="${esc(rid)}">${teamOpts(leadOf,'None')}</select></div>
+  <div class="row" style="margin-top:4px"><label class="hint" style="flex:0 0 100%">Alternate leader of</label><select data-act="setAlt" data-s="${esc(s.id)}" data-r="${esc(rid)}">${teamOpts(altOf,'None')}</select></div>`:''}</div>`}).join('')}
+ <div class="actions"><button class="b p" data-act="genCard" data-r="${esc(rid)}">Generate duty cards</button></div>`}
+function vScen(){
+ if(V.scEdit&&sc(V.scEdit))return vScEdit(sc(V.scEdit));
+ return `<h2>Drills and scenarios</h2>
+ <div class="panel"><div class="list">${S.scenarios.map((s,i)=>`<div class="li"><div class="nm">${esc(s.name)}<div class="tag">${s.teams.length} teams · ${s.alarm==='fire'?'Fire alarm':'General alarm'}</div></div><span class="badge">Card ${s.group}</span><button class="b s" data-act="mvSc" data-i="${i}" data-d="-1" aria-label="Move up"${i?'':' disabled'}>↑</button><button class="b s" data-act="editSc" data-s="${esc(s.id)}">Edit</button></div>`).join('')}</div>
+ <div class="actions"><button class="b p" data-act="addSc">+ Add new scenario</button></div></div>`}
+function vScEdit(s){
+ const ds=`data-s="${esc(s.id)}"`;
+ const fld=(f,label,ta)=>`<label class="f">${label}</label>${ta?`<textarea data-f="${f}" ${ds}>${esc(s[f])}</textarea>`:`<input data-f="${f}" ${ds} value="${esc(s[f])}">`}`;
+ return `<div class="actions"><button class="b" data-act="back">← All drills</button><button class="b" data-act="pvBill" ${ds}>Preview station bill</button></div>
+ <h2>${esc(s.name)}</h2>${locList()}${datalists([s])}
+ <div class="panel"><h3>Scenario</h3>
+ ${fld('name','Name (on cards)')}${fld('title','Title on station bill')}
+ <div class="row"><div><label class="f">Alarm</label><select data-f="alarm" ${ds}>${opt('general','General alarm',s.alarm)}${opt('fire','Fire alarm',s.alarm)}</select></div><div><label class="f">Card group</label><select data-f="group" ${ds}>${opt('A','Card A · '+S.cardA,s.group)}${opt('B','Card B · other emergencies',s.group)}</select></div></div>
+ <label class="f">Designated muster station</label><input list="dlLoc" data-f="muster" ${ds} value="${esc(s.muster)}">
+ ${fld('alarmText','Alarm description for this drill (blank = general)')}
+ ${fld('unassigned','Duty for crew with no role')}
+ <div class="row" style="margin-top:10px">${[['fireStations','Show fire stations'],['equipment','Show equipment table'],['mobAlarm','MOB secondary alarm']].map(([f,l])=>`<label class="row" style="gap:6px"><input type="checkbox" data-f="${f}" ${ds}${s[f]?' checked':''}>${l}</label>`).join('')}</div></div>
+ <div class="panel"><h3>Notes</h3>
+ <label class="f">Key note (prints on cabin cards)</label><textarea data-f="keyNote" ${ds} data-cnt="1">${esc(s.keyNote)}</textarea><div class="cnt${s.keyNote.length>(s.group==='A'?320:180)?' over':''}" id="cnt">${s.keyNote.length} / ${s.group==='A'?320:180} suggested</div>
+ ${fld('immediate','Immediate action (station bill)',1)}${fld('instructions','Full instructions (station bill)',1)}${fld('footer','Footer line',1)}
+ <div class="actions"><button class="b" data-act="resetNotes" ${ds}>Reset notes to default</button></div></div>
+ <h3 style="margin-top:16px">Teams</h3>
+ ${s.teams.map((t,ti)=>{const tds=`${ds} data-t="${ti}"`;return `<div class="panel"><input data-f="name" ${tds} value="${esc(t.name)}" aria-label="Team name" style="font-weight:600">
+  <label class="f">Muster station</label><input list="dlLoc" data-f="muster" ${tds} value="${esc(t.muster)}" placeholder="${esc(s.muster)}">
+  <label class="f">Team task</label><textarea data-f="task" ${tds}>${esc(t.task)}</textarea>
+  <div class="row"><div><label class="f">Leader</label><select data-f="lead" ${tds}>${rankOpts(t.lead,'None')}</select></div><div><label class="f">Alternate leader</label><select data-f="alt" ${tds}>${rankOpts(t.alt,'None')}</select></div></div>
+  ${t.members.map((m,mi)=>{const mds=`${tds} data-m="${mi}"`;return `<div class="mem"><select data-f="r" ${mds} aria-label="Rank">${rankOpts(m.r)}</select>${condSel(m,mds)}<input class="full" list="dl-${esc(s.id)}" data-f="d" ${mds} value="${esc(m.d)}" placeholder="Choose or type a duty" aria-label="Duty"><input data-f="l" ${mds} value="${esc(m.l)}" placeholder="Label, e.g. Duty Officer (optional)" aria-label="Label"><button class="b s d" data-act="delMem" ${mds}>Remove</button></div>`}).join('')}
+  <div class="actions"><button class="b s" data-act="addMem" ${tds}>+ Add member</button><button class="b s" data-act="mvTeamPos" ${tds} data-d="-1"${ti?'':' disabled'}>Move up</button><button class="b s d" data-act="delTeam" ${tds}>Delete team</button></div></div>`}).join('')}
+ <div class="actions"><button class="b p" data-act="addTeam" ${ds}>+ Add team</button><button class="b d" data-act="delSc" ${ds}>Delete scenario</button></div>`}
+function vSet(){
+ const sh=(f,l)=>`<div><label class="f">${l}</label><input data-set="ship" data-f="${f}" value="${esc(S.ship[f])}"></div>`;
+ const q=(V.libQ||'').toLowerCase();const lib=allDuties().filter(d=>!q||d.toLowerCase().includes(q));
+ return `<h2>Settings</h2>
+ <div class="panel"><h3>Ship</h3><div class="row">${sh('name','Ship name')}${sh('call','Call sign')}</div><div class="row">${sh('port','Port of registry')}${sh('imo','IMO number')}</div><div class="row">${sh('rev','Revision no.')}${sh('approved','Approved by (rank)')}</div></div>
+ <div class="panel"><h3>Duty cards</h3><label class="f">Card A subtitle</label><input data-set="root" data-f="cardA" value="${esc(S.cardA)}"><p class="hint">Choose which drills go on Card A or B in Drills → Edit → Card group.</p></div>
+ <div class="panel"><h3>Alarm signals</h3>
+ <label class="f">General emergency alarm · 7 short + 1 long</label><textarea data-set="alarms" data-f="general">${esc(S.alarms.general)}</textarea>
+ <label class="f">Fire alarm · continuous</label><textarea data-set="alarms" data-f="fire">${esc(S.alarms.fire)}</textarea>
+ <label class="f">MOB secondary alarm · 3 long</label><textarea data-set="alarms" data-f="mob">${esc(S.alarms.mob)}</textarea>
+ <label class="f">General emergency instructions (all-crew page)</label><textarea data-set="root" data-f="general" style="min-height:160px">${esc(S.general)}</textarea></div>
+ <div class="panel"><h3>Muster and fire station locations</h3><p class="hint">Names starting with "Fire Station" print on fire, enclosed space and helicopter bills.</p>
+ ${S.locations.map((l,i)=>`<div class="row" style="margin:6px 0"><input data-act="locEdit" data-i="${i}" value="${esc(l)}" aria-label="Location"><button class="b s d" data-act="delLoc" data-i="${i}" style="flex:0 0 auto">Delete</button></div>`).join('')}
+ <div class="row" style="margin-top:8px"><input id="newLoc" placeholder="Rescue Boat Station: aft, port side"><button class="b s" data-act="addLoc" style="flex:0 0 auto">Add</button></div></div>
+ <div class="panel"><h3>Location of equipment</h3>
+ <div class="row">${S.equipment.head.map((h,i)=>`<input data-act="eqHead" data-i="${i}" value="${esc(h)}" style="font-weight:600" aria-label="Column ${i+1}">`).join('')}</div>
+ ${S.equipment.rows.map((r,ri)=>`<div class="row" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)">${r.map((c,ci)=>`<input data-act="eqCell" data-i="${ri}" data-c="${ci}" value="${esc(c)}" aria-label="${esc(S.equipment.head[ci])}">`).join('')}<button class="b s d" data-act="delEq" data-i="${ri}" style="flex:0 0 auto">Delete row</button></div>`).join('')}
+ <div class="actions"><button class="b s" data-act="addEq">+ Add row</button></div></div>
+ <div class="panel"><h3>Duty library (${allDuties().length})</h3><p class="hint">These fill the duty dropdowns. Editing here changes the list, not duties already assigned.</p>
+ <input id="libQ" data-act="libQ" placeholder="Search duties" value="${esc(V.libQ||'')}">
+ <div class="row" style="margin-top:8px"><input id="newLib" placeholder="Type a new duty"><button class="b s" data-act="addLib" style="flex:0 0 auto">Add</button></div>
+ <div class="list" style="margin-top:8px">${lib.slice(0,60).map(d=>`<div class="li"><span class="grow" style="font-size:15px">${esc(d)}</span><button class="b s d" data-act="delLib" data-v="${esc(d)}">Delete</button></div>`).join('')}</div>${lib.length>60?`<p class="hint">Showing 60 of ${lib.length}. Search to narrow.</p>`:''}</div>
+ <div class="panel"><h3>Backup and transfer</h3><p class="hint">Data is saved on this device only. Export a backup before clearing the browser or moving to another phone.</p>
+ <div class="actions"><button class="b p" data-act="export">Download backup (.json)</button><button class="b" data-act="copyExport">Copy backup text</button></div>
+ <label class="f" for="impF">Import from file</label><input type="file" id="impF" accept=".json,application/json">
+ <label class="f" for="impT">Or paste backup text</label><textarea id="impT" placeholder='{"v":1,...}'></textarea>
+ <div class="actions"><button class="b" data-act="importText">Import pasted text</button><button class="b d" data-act="resetAll">Reset everything to defaults</button></div><div id="impMsg" class="hint"></div></div>
+ <p class="hint">${framed?'In this viewer, print buttons save a print-ready file. Open it in Safari or Chrome to print or save as PDF.':'To print or save as PDF, use the print buttons, then Print or Save as PDF in the print screen.'}</p>`}
+
+/* ================= RENDER ================= */
+const view=document.getElementById('view');
+function render(keepScroll){
+ const y=scrollY;
+ document.getElementById('shipline').textContent=[S.ship.name,S.ship.call].filter(Boolean).join(' · ');
+ document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.tab));
+ view.innerHTML={cards:vCards,bills:vBills,ranks:vRanks,scen:vScen,set:vSet}[V.tab]();
+ requestAnimationFrame(layoutPreviews);
+ if(keepScroll)scrollTo(0,y);else scrollTo(0,0)}
+document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;V.tab=b.dataset.tab;V.rankEdit=null;V.scEdit=null;render()});
+
+/* ================= EDIT HANDLERS ================= */
+function objOf(ds){
+ if(ds.set)return ds.set==='root'?S:S[ds.set];
+ if(ds.r&&!ds.s)return rank(ds.r);
+ const s=sc(ds.s);if(!s)return null;if(ds.t==null)return s;
+ const t=s.teams[+ds.t];if(!t)return null;if(ds.m==null)return t;return t.members[+ds.m]}
+function commit(el){
+ const ds=el.dataset;if(!ds.f)return false;const o=objOf(ds);if(!o)return false;
+ o[ds.f]=el.type==='checkbox'?el.checked:el.value;
+ if(ds.f==='d'&&el.value.trim()&&!S.library.includes(el.value))S.library.push(el.value);
+ save();return true}
+view.addEventListener('input',e=>{
+ const el=e.target,ds=el.dataset;
+ if(ds.act==='libQ'){V.libQ=el.value;clearTimeout(window._lq);window._lq=setTimeout(()=>{render(true);const q=document.getElementById('libQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},300);return}
+ if(ds.act==='locEdit'){const old=S.locations[+ds.i];S.locations[+ds.i]=el.value;S.scenarios.forEach(s=>{if(s.muster===old)s.muster=el.value;s.teams.forEach(t=>{if(t.muster===old)t.muster=el.value})});save();return}
+ if(ds.act==='eqHead'){S.equipment.head[+ds.i]=el.value;save();return}
+ if(ds.act==='eqCell'){S.equipment.rows[+ds.i][+ds.c]=el.value;save();return}
+ if(el.tagName!=='SELECT'&&el.type!=='checkbox'){commit(el);if(ds.cnt){const c=document.getElementById('cnt'),s=sc(ds.s),lim=s.group==='A'?320:180;c.textContent=`${el.value.length} / ${lim} suggested`;c.classList.toggle('over',el.value.length>lim)}}});
+view.addEventListener('change',e=>{
+ const el=e.target,ds=el.dataset;
+ if(el.id==='impF'){const f=el.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>importJSON(rd.result);rd.readAsText(f);return}
+ if(ds.act==='seat'){if(el.value)assignSeat(el.value,+ds.n);else{const o=seatOf(+ds.n);if(o)o.seat=''}save();return render(true)}
+ if(ds.act==='rankSeat'){assignSeat(ds.r,el.value?+el.value:'');save();return render(true)}
+ if(ds.re){commit(el);return render(true)}
+ if(ds.act==='pickRank'){V.rank=el.value;return render(true)}
+ if(ds.act==='pickBill'){V.bill=el.value;return render(true)}
+ if(ds.act==='mvTeam'){const s=sc(ds.s),m=s.teams[+ds.t].members.splice(+ds.m,1)[0];s.teams[+el.value].members.push(m);save();return render(true)}
+ if(ds.act==='setLead'||ds.act==='setAlt'){const s=sc(ds.s),k=ds.act==='setLead'?'lead':'alt';s.teams.forEach(t=>{if(t[k]===ds.r)t[k]=''});if(+el.value>=0)s.teams[+el.value][k]=ds.r;save();return render(true)}
+ if(el.tagName==='SELECT'||el.type==='checkbox'){if(commit(el))render(true);return}
+ if(ds.f==='d')commit(el)});
+function arm(btn){if(btn.dataset.armed)return true;btn.dataset.armed='1';const t=btn.textContent;btn.textContent='Tap again to confirm';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=t}},3000);return false}
+function importJSON(txt){const msg=document.getElementById('impMsg');try{const d=JSON.parse(txt);if(!d.roster||!d.scenarios||!d.ship)throw 0;S=Object.assign(clone(DEFAULTS),d);save();render();V.tab='set';render()}catch(e){if(msg)msg.textContent='That file is not a valid backup. Nothing was changed.'}}
+view.addEventListener('click',e=>{
+ const b=e.target.closest('[data-act]');if(!b||b.tagName==='SELECT'||b.tagName==='INPUT')return;const ds=b.dataset,a=ds.act;
+ const s=ds.s?sc(ds.s):null;
+ switch(a){
+ case 'card':V.card=ds.v;return render(true);
+ case 'printCard':return doPrint(V.card==='both'?[cardHTML(V.rank,'A'),cardHTML(V.rank,'B')]:[cardHTML(V.rank,V.card)],'Duty card '+rn(V.rank));
+ case 'printAllCards':return doPrint(allCards(),'All duty cards');
+ case 'printBill':return doPrint([V.bill==='general'?generalHTML():V.bill==='seats'?seatPlanHTML():V.bill==='rafts'?raftPageHTML():billHTML(sc(V.bill))],V.bill==='general'?'General emergency instructions':V.bill==='seats'?'Lifeboat seat allocation':V.bill==='rafts'?'Liferaft allocation':'Station bill '+sc(V.bill).name);
+ case 'autoSeat':{if(!arm(b))return;let n=2;S.roster.forEach(r=>{r.seat=r.id==='CO'?1:n++});save();return render(true)}
+ case 'printAllBills':return doPrint(allBills(),'All station bills');
+ case 'printEverything':return doPrint([...allBills(),...allCards()],'Station bills and duty cards');
+ case 'editRank':V.tab='ranks';V.rankEdit=ds.r;return render();
+ case 'genCard':V.tab='cards';V.rank=ds.r;V.card='both';V.rankEdit=null;return render();
+ case 'back':V.rankEdit=null;V.scEdit=null;return render();
+ case 'addRank':{const n=document.getElementById('nrName').value.trim();if(!n){document.getElementById('nrName').focus();return}const id='R'+uid();S.roster.push({id,name:n,dept:document.getElementById('nrDept').value,watch:false});save();V.rankEdit=id;return render()}
+ case 'delRank':if(!arm(b))return;S.roster=S.roster.filter(r=>r.id!==ds.r);S.scenarios.forEach(x=>x.teams.forEach(t=>{t.members=t.members.filter(m=>m.r!==ds.r);if(t.lead===ds.r)t.lead='';if(t.alt===ds.r)t.alt=''}));save();return render(true);
+ case 'mvRank':{const i=S.roster.findIndex(r=>r.id===ds.r),j=i+(+ds.d);if(j<0||j>=S.roster.length)return;[S.roster[i],S.roster[j]]=[S.roster[j],S.roster[i]];save();return render(true)}
+ case 'addRole':{const sel=document.getElementById('add-'+ds.s);s.teams[+sel.value].members.push(M(ds.r,''));save();return render(true)}
+ case 'delMem':s.teams[+ds.t].members.splice(+ds.m,1);save();return render(true);
+ case 'addMem':s.teams[+ds.t].members.push(M(S.roster[0].id,''));save();return render(true);
+ case 'addTeam':s.teams.push(T('New team','','','','',[]));save();return render(true);
+ case 'delTeam':if(!arm(b))return;s.teams.splice(+ds.t,1);save();return render(true);
+ case 'mvTeamPos':{const i=+ds.t;if(i<1)return;[s.teams[i-1],s.teams[i]]=[s.teams[i],s.teams[i-1]];save();return render(true)}
+ case 'editSc':V.scEdit=ds.s;return render();
+ case 'mvSc':{const i=+ds.i;if(i<1)return;[S.scenarios[i-1],S.scenarios[i]]=[S.scenarios[i],S.scenarios[i-1]];save();return render(true)}
+ case 'addSc':{const n=SC({name:'New scenario',title:'Emergency plan – new scenario',teams:[T('Bridge Team',BRG,'Operation centre: central command and control.','MA','',[M('MA','In command of all operations.')])]});S.scenarios.push(n);save();V.scEdit=n.id;return render()}
+ case 'delSc':if(!arm(b))return;S.scenarios=S.scenarios.filter(x=>x!==s);V.scEdit=null;save();return render();
+ case 'pvBill':V.tab='bills';V.bill=s.id;V.scEdit=null;return render();
+ case 'resetNotes':{if(!arm(b))return;const d=DEFAULTS.scenarios.find(x=>x.name===s.name)||DEFAULTS.scenarios[S.scenarios.indexOf(s)];if(d){['keyNote','immediate','instructions','footer'].forEach(k=>s[k]=d[k]);s.teams.forEach(t=>{const dt=d.teams.find(x=>x.name===t.name);if(dt)t.task=dt.task})}save();return render(true)}
+ case 'addLoc':{const v=document.getElementById('newLoc').value.trim();if(!v)return;S.locations.push(v);save();return render(true)}
+ case 'delLoc':if(!arm(b))return;S.locations.splice(+ds.i,1);save();return render(true);
+ case 'addEq':S.equipment.rows.push(S.equipment.head.map(()=>''));save();return render(true);
+ case 'delEq':S.equipment.rows.splice(+ds.i,1);save();return render(true);
+ case 'addLib':{const v=document.getElementById('newLib').value.trim();if(v&&!S.library.includes(v))S.library.push(v);save();return render(true)}
+ case 'delLib':S.library=S.library.filter(d=>d!==ds.v);if(allDuties().includes(ds.v)){const el=b.closest('.li');el.querySelector('.grow').textContent=ds.v+' (still assigned to a rank)';return}save();return render(true);
+ case 'export':{if(framed&&DL){DL.save({filename:'station-bill-backup-'+new Date().toISOString().slice(0,10)+'.json',data:JSON.stringify(S,null,1)}).then(()=>note('Backup saved.'),()=>note('Backup not saved. Try again or use Copy backup text.'));return}const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const a2=document.createElement('a');a2.href=URL.createObjectURL(blob);a2.download='station-bill-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a2);a2.click();a2.remove();return}
+ case 'copyExport':{const t=JSON.stringify(S);const ta=document.getElementById('impT');ta.value=t;try{navigator.clipboard.writeText(t).then(()=>document.getElementById('impMsg').textContent='Backup copied. Paste it into a note or email to keep it.',()=>document.getElementById('impMsg').textContent='Backup text is in the box below. Select all and copy.')}catch(e){document.getElementById('impMsg').textContent='Backup text is in the box below. Select all and copy.'}return}
+ case 'importText':return importJSON(document.getElementById('impT').value);
+ case 'resetAll':if(!arm(b))return;S=clone(DEFAULTS);S.library=allDuties();save();return render();
+ }});
+render();
+if('serviceWorker' in navigator&&location.protocol==='https:'&&!framed){addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
+}
+</script>
+</body>
+</html>

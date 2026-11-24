@@ -25,9 +25,14 @@
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans);overflow-x:clip;-webkit-text-size-adjust:100%}
 header.top{position:sticky;top:0;z-index:5;background:var(--bar);color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px}
-body::after{content:"BETA TEST";position:fixed;left:50%;top:52%;transform:translate(-50%,-50%) rotate(-32deg);font:700 min(22vw,150px)/1 var(--cond);letter-spacing:.06em;color:rgba(0,95,220,.06);white-space:nowrap;pointer-events:none;z-index:4}
 .beta{display:inline-block;font:700 11px/1 var(--sans);letter-spacing:.06em;background:#005FDC;color:#fff;border-radius:4px;padding:3px 6px;margin-left:8px;vertical-align:middle}
-@media(max-width:480px){header.top .sig{display:none}header.top h1{font-size:18px}}
+@media(max-width:480px){header.top .sig{display:none}/* Beta watermark and signature (same as Port Watch Log): drawn over the page but never blocks a tap */
+.wmark{position:fixed;inset:0;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.wmark div{transform:rotate(-28deg);text-align:center;color:var(--ink);opacity:.08;user-select:none}
+.wmark b{display:block;font:800 clamp(72px,24vw,190px)/1 var(--sans);letter-spacing:.12em}
+.wmark span{display:block;font:600 clamp(18px,5vw,34px)/1.2 var(--sans);letter-spacing:.08em;margin-top:6px}
+.sigf{text-align:center;font-size:.8rem;color:var(--mut);padding:14px 0 2px}.sigf b{color:var(--brand);font-weight:700}
+header.top h1{font-size:18px}}
 #lockBtn{flex:none;border:1px solid rgba(255,255,255,.35);background:none;color:#fff;font:600 13px var(--sans);border-radius:6px;padding:6px 10px;min-height:34px}
 header.top h1{font:600 20px/1.1 var(--cond);margin:0;letter-spacing:.2px;flex:1}
 header.top .sub{font-size:13px;color:#aab3bd;display:block;font-weight:400;font-family:var(--sans)}
@@ -153,7 +158,8 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 .a4 .sgl{display:grid;grid-template-columns:30% 1fr;gap:8mm;margin-top:9mm}.a4 .sgl span{display:block;border-bottom:.3mm solid #0B2545}.a4 .sgl small{display:block;font-size:8.5pt;color:#444;margin-top:1mm}
 /* beta watermark */
 .a4{position:relative}
-.a4.wm::before{content:"BETA TEST";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-32deg);font:700 82pt/1 var(--cond);letter-spacing:4mm;color:rgba(0,95,220,.07);white-space:nowrap;pointer-events:none;z-index:0}
+.a4.wm::before{content:"BETA";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-28deg);font:800 120pt/1 var(--sans);letter-spacing:.12em;color:#0B2545;opacity:.08;white-space:nowrap;pointer-events:none;z-index:0}
+.a4.wm::after{content:"by @Ali0th";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-28deg) translateY(30mm);font:600 22pt/1.2 var(--sans);letter-spacing:.08em;color:#0B2545;opacity:.08;white-space:nowrap;pointer-events:none;z-index:0}
 .a4.wm>*{position:relative;z-index:1}
 .a4 .byline{font:500 6.5pt var(--sans);color:#a3afbf;letter-spacing:.2px}
 /* bills */
@@ -192,12 +198,13 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 </head>
 <body>
 <header class="top">
- <h1>Station bill generator<span class="beta">BETA</span><span class="sub" id="shipline"></span></h1>
+ <h1>Station bill generator<span class="sub" id="shipline"></span></h1>
  <button id="lockBtn" hidden></button>
  <span id="saved">Saved</span>
  <span class="sig" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="l"></i></span>
 </header>
 <main id="view"></main>
+<div class="wmark" aria-hidden="true"><div><b>BETA</b><span>by @Ali0th</span></div></div>
 <nav class="tabs" id="tabs">
  <button data-tab="cards"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Cards</button>
  <button data-tab="bills"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M9 9v11"/></svg>Bills</button>
@@ -397,13 +404,14 @@ const FF_NOTES='First to board: the INJURED (seat 7). Then board in DESCENDING s
 const FF_LAUNCH='1. Remove lashing and electrical supply.\n2. Embarkation.\n3. Take seated position and secure seat belts.\n4. Secure hatches.\n5. Start engine.\n6. Ensure clear landing.\n7. Release boat.\n8. Steer away.';
 function applyFF(D){Object.assign(D.boat,{layout:'ff750',name:'Schat-Harding FF750 free-fall survival craft',capacity:32,spec:'Capacity 32 persons · LOA 8.97 m × beam 2.8 m × height 3.25 m · max free-fall height 23 m · 40 HP diesel, 6 knots',notes:FF_NOTES,launch:FF_LAUNCH});
  D.roster.forEach(r=>{r.seat=FF.seats[r.id]||'';if(r.id==='CO'&&r.raft==='P')r.raft='A'})}
-const DEFAULTS=SEED();DEFAULTS.lock={h:'4d2d8cae85c65b149fe2a44f2eaa30983b0ee582c4504d93fd4bae5b9d00ca2c',f:'f54774faf'};DEFAULTS.pin023=1;DEFAULTS.contact='3rd Officer';applyProc(DEFAULTS);applySop(DEFAULTS);applyFF(DEFAULTS);
+const DEFAULTS=SEED();DEFAULTS.betaPrint=false;DEFAULTS.wmPrintOff=1;DEFAULTS.lock={h:'4d2d8cae85c65b149fe2a44f2eaa30983b0ee582c4504d93fd4bae5b9d00ca2c',f:'f54774faf'};DEFAULTS.pin023=1;DEFAULTS.contact='3rd Officer';applyProc(DEFAULTS);applySop(DEFAULTS);applyFF(DEFAULTS);
 {const x=DEFAULTS.scenarios.find(q=>/man overboard/i.test(q.name)),t=x&&x.teams.find(q=>/lookout/i.test(q.name)),P={CDT:'Lookout: forward',MM:'Lookout: forward',EF:'Lookout: aft',OSMC:'Lookout: aft',OS1:'Lookout: port bridge wing',OS2:'Lookout: stbd bridge wing'};if(t)t.members.forEach(m=>{if(P[m.r])m.mu=P[m.r]});DEFAULTS.mobLook=1}
 if(!S||!S.roster||!S.scenarios){S=clone(DEFAULTS);S.library=allDuties();}
 if(!S.proc0428){applyProc(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 if(S.boat&&!S.boat.layout){applyFF(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 if(!S.mobLook){S.mobLook=1;const x=S.scenarios.find(q=>/man overboard/i.test(q.name));const t=x&&x.teams.find(q=>/lookout/i.test(q.name));const P={CDT:'Lookout: forward',MM:'Lookout: forward',EF:'Lookout: aft',OSMC:'Lookout: aft',OS1:'Lookout: port bridge wing',OS2:'Lookout: stbd bridge wing'};if(t)t.members.forEach(m=>{if(P[m.r]&&!m.mu)m.mu=P[m.r]});try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 if(!S.pin023){S.pin023=1;S.lock={h:'4d2d8cae85c65b149fe2a44f2eaa30983b0ee582c4504d93fd4bae5b9d00ca2c',f:'f54774faf'};if(!S.contact)S.contact='3rd Officer';try{sessionStorage.removeItem('sb_unlock')}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+if(!S.wmPrintOff){S.wmPrintOff=1;S.betaPrint=false;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 if(!S.sop0095){applySop(S);try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function dutyUse(d){let n=0;S.scenarios.forEach(x=>x.teams.forEach(t=>t.members.forEach(m=>{if(m.d===d)n++})));return n}
 function allDuties(){const set=new Set(S.library||[]);S.scenarios.forEach(s=>s.teams.forEach(t=>t.members.forEach(m=>m.d&&set.add(m.d))));return [...set].sort()}
@@ -767,7 +775,7 @@ function vSet(){
  const q=(V.libQ||'').toLowerCase();const lib=allDuties().filter(d=>!q||d.toLowerCase().includes(q));
  return `<h2>Settings</h2>
  ${lockPanel()}
- <div class="panel"><label class="row" style="gap:8px"><input type="checkbox" data-set="root" data-f="betaPrint"${S.betaPrint===false?'':' checked'} style="flex:0 0 auto"><span>Show BETA TEST watermark on printouts</span></label></div>
+ <div class="panel"><label class="row" style="gap:8px"><input type="checkbox" data-set="root" data-f="betaPrint"${S.betaPrint===false?'':' checked'} style="flex:0 0 auto"><span>Also print the BETA watermark on printouts (the screen always shows it)</span></label></div>
  <div class="panel"><h3>Ship</h3><div class="row">${sh('name','Ship name')}${sh('call','Call sign')}</div><div class="row">${sh('port','Port of registry')}${sh('imo','IMO number')}</div><div class="row">${sh('rev','Revision no.')}${sh('approved','Approved by (rank)')}</div></div>
  <div class="panel"><h3>Liferafts</h3><p class="hint">No fixed liferaft allocation. These locations print on the liferaft station bill.</p><label class="f">Port liferaft</label><input data-set="rafts" data-f="port" value="${esc(S.rafts.port)}"><label class="f">Starboard liferaft</label><input data-set="rafts" data-f="stbd" value="${esc(S.rafts.stbd)}"></div>
  <div class="panel"><h3>Duty cards</h3><label class="f">Card A subtitle</label><input data-set="root" data-f="cardA" value="${esc(S.cardA)}"><p class="hint">Choose which drills go on Card A or B in Drills → Edit → Card group.</p></div>
@@ -801,7 +809,7 @@ function render(keepScroll){
  document.getElementById('shipline').textContent=[S.ship.name,S.ship.call].filter(Boolean).join(' · ');
  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===V.tab));
  const gate=isLocked()&&['ranks','scen','set'].includes(V.tab);
- view.innerHTML=gate?vLock():{cards:vCards,bills:vBills,ranks:vRanks,scen:vScen,set:vSet}[V.tab]();
+ view.innerHTML=(gate?vLock():{cards:vCards,bills:vBills,ranks:vRanks,scen:vScen,set:vSet}[V.tab]())+'<footer class="sigf"><b>Beta</b> · by @Ali0th</footer>';
  const lb=document.getElementById('lockBtn');lb.hidden=!hasPin();lb.textContent=isLocked()?'View only':'Lock';
  requestAnimationFrame(layoutPreviews);
  if(V.tab==='bills'&&V.bill==='seats'&&V.selSeat){const g=view.querySelector(`.pvw [data-seat="${V.selSeat}"]`);if(g)g.classList.add('sel')}

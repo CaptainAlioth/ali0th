@@ -163,7 +163,7 @@ button.s{min-height:38px;padding:4px 10px;font-size:14px}
 @media print{
  body{background:#fff}
  body>*:not(#print){display:none!important}
- #print{position:static;width:auto}
+ #print{position:static!important;left:auto!important;width:auto;display:block!important;visibility:visible!important}
  .a4{width:auto;padding:0;break-after:page;page-break-after:always}
  .a4.card{height:272mm}
  .a4.bill{min-height:0}
@@ -596,7 +596,7 @@ async function doPrint(pages,label){
   return}
  if(framed){P.innerHTML='';note('Printing is not available inside this viewer. Open the app file in Safari or Chrome to print.');return}
  setTimeout(()=>{try{window.print()}catch(e){}},80)}
-addEventListener('afterprint',()=>{document.getElementById('print').innerHTML=''});
+/* iOS fires afterprint as soon as the print sheet opens, so the print pages are kept until the next print */
 const allCards=()=>S.roster.flatMap(r=>[cardHTML(r.id,'A'),cardHTML(r.id,'B')]);
 const allBills=()=>[generalHTML(),seatPlanHTML(),...S.scenarios.map(billHTML)];
 const fitWarn='<div class="warn fitw" hidden>This card is too long for one A4 page. Shorten the longest key notes or duties in Drills.</div>';

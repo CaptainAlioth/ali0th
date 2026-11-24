@@ -158,6 +158,14 @@
   #toast.show { opacity: 1; }
   @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
   @media (max-width: 420px) { .cranes { grid-template-columns: repeat(4, 1fr); } .tog.shore { grid-column: 1 / -1; } }
+
+  /* Beta watermark and signature: drawn over the page but never blocks a tap. */
+  .wmark { position: fixed; inset: 0; z-index: 3; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .wmark div { transform: rotate(-28deg); text-align: center; color: var(--fg); opacity: 0.08; user-select: none; }
+  .wmark b { display: block; font: 800 clamp(72px, 24vw, 190px)/1 var(--font-body); letter-spacing: 0.12em; }
+  .wmark span { display: block; font: 600 clamp(18px, 5vw, 34px)/1.2 var(--font-body); letter-spacing: 0.08em; margin-top: 6px; }
+  .sig { text-align: center; font-size: 0.8rem; color: var(--muted); padding: 6px 0 2px; }
+  .sig b { color: var(--accent-ink); font-weight: 700; }
 </style>
 </head><body>
 <div class="wrap">
@@ -218,7 +226,9 @@
       <div class="row" style="margin-top:8px"><button class="small danger" id="resetLists" type="button">Clear all code lists</button></div>
     </details>
   </section>
+  <footer class="sig"><b>Beta</b> · by @Ali0th</footer>
 </div>
+<div class="wmark" aria-hidden="true"><div><b>BETA</b><span>by @Ali0th</span></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>

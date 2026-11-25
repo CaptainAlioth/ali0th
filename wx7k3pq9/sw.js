@@ -1,5 +1,5 @@
 // SOFast WX offline cache. Bump the version when you upload a new index.html.
-const CACHE = "sofastwx-v2";
+const CACHE = "sofastwx-v6";
 const FILES = ["./", "./index.html"];
 
 self.addEventListener("install", e => {

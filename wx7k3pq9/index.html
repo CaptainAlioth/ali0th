@@ -136,6 +136,12 @@ footer b{color:#FFE98F}
 .ccard span b{color:var(--y);font-family:ui-monospace,Consolas,monospace;font-size:15px}
 .ccard.on{border-color:var(--y);box-shadow:0 0 0 2px var(--y)}.ccard.on span{background:var(--y);color:#111;font-weight:700}.ccard.on span b{color:#111}
 @media(max-width:700px){.cgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.gcols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(max-width:700px){.gcols{grid-template-columns:minmax(0,1fr)}}
+.glab{font-size:13px;color:var(--y);font-weight:700;margin-bottom:4px}
+.glist{display:grid;gap:4px}
+.gbtn{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:9px 10px;text-align:left;font-size:14px;cursor:pointer;min-height:40px}
+.gbtn:hover{border-color:var(--yd)}.gbtn.on{background:var(--y);color:#111;font-weight:700;border-color:var(--y)}.gbtn.nd{color:var(--mut)}
 .wwl{max-height:330px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:8px;background:var(--card2);position:relative}
 .wwg{position:sticky;top:0;z-index:1;background:#2e2a14;color:var(--y);font-size:12px;font-weight:700;padding:6px 10px}
 .wwr{display:flex;gap:10px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--txt);padding:11px 10px;font-size:15px;cursor:pointer;min-height:44px;align-items:center}
@@ -198,6 +204,13 @@ select.wwlist{height:auto;padding:4px}select.wwlist option{padding:5px 6px}selec
     <div><label>Course / heading (°T)</label><input id="course" inputmode="numeric" placeholder="045"></div>
     <div><label>Speed (kn)</label><input id="speed" inputmode="decimal" placeholder="12.5"></div>
   </div>
+  <div class="hint">Course and speed now: used for true wind and DR.</div>
+  <label style="margin-top:4px">Course &amp; speed made good during last 3 hrs (222 group)</label>
+  <div class="row">
+    <div><select id="cmgDs"><option value="">Auto</option><option value="0">Stationary</option><option value="8">338–022 (N)</option><option value="1">023–067 (NE)</option><option value="2">068–112 (E)</option><option value="3">113–157 (SE)</option><option value="4">158–202 (S)</option><option value="5">203–247 (SW)</option><option value="6">248–292 (W)</option><option value="7">293–337 (NW)</option></select></div>
+    <div><select id="cmgVs"><option value="">Auto</option><option value="0">0 kn</option><option value="1">1–5 kn</option><option value="2">6–10 kn</option><option value="3">11–15 kn</option><option value="4">16–20 kn</option><option value="5">21–25 kn</option><option value="6">26–30 kn</option><option value="7">31–35 kn</option><option value="8">36–40 kn</option><option value="9">over 40 kn</option></select></div>
+  </div>
+  <div class="calc" id="cmgCalc">Made good: –</div>
 </div></details>
 
 <details open><summary><span><span class="num">2</span>Wind</span><span class="sum" id="s3"></span></summary>
@@ -229,8 +242,21 @@ select.wwlist{height:auto;padding:4px}select.wwlist option{padding:5px 6px}selec
 
 <details open><summary><span><span class="num">3</span>Visibility &amp; weather</span><span class="sum" id="s4"></span></summary>
 <div class="body">
-  <div><label>Visibility VV</label><select id="vis"></select></div>
-  <div><label>Present weather ww</label><input id="wwFilter" placeholder="Search e.g. rain, fog, drizzle…"><input type="hidden" id="ww"><div id="wwList" class="wwl" style="margin-top:6px"></div><div class="calc" id="wwNow" style="margin-top:6px">Selected: – not observed –</div></div>
+  <div><label>Visibility VV</label><select id="vis"></select><div class="hint" style="margin-top:4px">When visibility is not the same in all directions, estimate it in the direction of least visibility.</div></div>
+  <div><label>Present weather ww</label>
+    <div class="seg" id="wwMode"><button type="button" data-m="guide" class="on">Step by step</button><button type="button" data-m="all">All codes</button></div>
+    <input type="hidden" id="ww">
+    <div id="wwGuide" style="margin-top:8px">
+      <div class="gcols">
+        <div><div class="glab">No precipitation (DRY) at ship at time of obs</div><div class="glist" id="genDry"></div></div>
+        <div><div class="glab">Precipitation (WET) at ship at time of obs</div><div class="glist" id="genWet"></div><div class="hint" style="margin-top:4px">*Thunder heard; lightning may or may not be seen.</div></div>
+      </div>
+      <div class="glab" style="margin-top:10px">Specific weather condition – pick the topmost one that applies</div>
+      <div class="wwl" id="wwSpec"><div class="hint" style="padding:10px">Choose a general condition above first.</div></div>
+      <div class="hint" style="margin-top:4px">Present weather describes the weather at the time of obs or, where it says so, during the hour before it.</div>
+    </div>
+    <div id="wwAll" class="hide" style="margin-top:8px"><input id="wwFilter" placeholder="Search e.g. rain, fog, drizzle…"><div id="wwList" class="wwl" style="margin-top:6px"></div></div>
+    <div class="calc" id="wwNow" style="margin-top:6px">Selected: – not observed –</div></div>
   <div class="row">
     <div><label>Past weather W1 (main)</label><select id="W1"></select></div>
     <div><label>Past weather W2 (second)</label><select id="W2"></select></div>
@@ -461,9 +487,8 @@ select.wwlist{height:auto;padding:4px}select.wwlist option{padding:5px 6px}selec
 /* ======================================================================
    CORE: code tables + FM 13 SHIP encoder (pure functions, no DOM)
    ====================================================================== */
-const VIS = [["90","under 0.03 nm (< 50 m)"],["91","0.03–0.1 nm (50–200 m)"],["92","0.1–0.3 nm (200–500 m)"],["93","0.3–0.5 nm (0.5–1 km)"],
- ["94","0.5–1 nm (1–2 km)"],["95","1–2 nm (2–4 km)"],["96","2–5 nm (4–10 km)"],
- ["97","5–11 nm (10–20 km)"],["98","11–27 nm (20–50 km)"],["99","27 nm or more (50 km+)"]];
+const VIS = [["90","< 0.03 nm (< 50 m)"],["91","0.03–0.1 nm (50–200 m)"],["92","0.1–0.3 nm (200–500 m)"],["93","0.3–0.5 nm (500–1000 m)"],
+ ["94","0.5–1.1 nm"],["95","1.1–2.2 nm"],["96","2.2–5.5 nm"],["97","5.5–11 nm"],["98","11–27 nm"],["99","> 27 nm"]];
 const CLOUD_H = [["0","0–50 m"],["1","50–100 m"],["2","100–200 m"],["3","200–300 m"],["4","300–600 m"],
  ["5","600–1000 m"],["6","1000–1500 m"],["7","1500–2000 m"],["8","2000–2500 m"],["9","2500 m+ or no cloud"],["/","Unknown / base below ship"]];
 const OKTAS = [["0","0 – Clear sky"],["1","1/8 or less"],["2","2/8"],["3","3/8"],["4","4/8"],["5","5/8"],["6","6/8"],["7","7/8 or more, not 8/8"],["8","8/8 – Overcast"],["9","Sky obscured (fog etc.)"],["/","Not observed"]];
@@ -614,16 +639,20 @@ function encode(o, s, last) {
     D.lat = (o.latH === "S" ? -1 : 1) * lat; D.lon = (o.lonH === "W" ? -1 : 1) * lon;
   }
   const qc = { NE: "1", SE: "3", SW: "5", NW: "7" }[(o.latH || "N") + (o.lonH || "E")];
-  add("99" + (lat === null ? "///" : pad(Math.min(lat * 10, 900), 3)),
-      `Latitude ${lat === null ? "?" : lat.toFixed(1) + "° " + o.latH}`);
-  add(qc + (lon === null ? "////" : pad(Math.min(lon * 10, 1800), 4)),
-      `Quadrant ${qc} (${o.latH}${o.lonH}), longitude ${lon === null ? "?" : lon.toFixed(1) + "° " + o.lonH}`);
+  // NWS Observing Handbook No.1: tenths = minutes ÷ 6, disregarding the remainder (truncate, never round)
+  const lat10 = lat === null ? null : Math.min(Math.trunc(latD) * 10 + Math.floor(latM / 6), 900);
+  const lon10 = lon === null ? null : Math.min(Math.trunc(lonD) * 10 + Math.floor(lonM / 6), 1800);
+  add("99" + (lat10 === null ? "///" : pad(lat10, 3)),
+      `Latitude ${lat10 === null ? "?" : (lat10 / 10).toFixed(1) + "° " + o.latH} (minutes ÷ 6, remainder dropped)`);
+  add(qc + (lon10 === null ? "////" : pad(lon10, 4)),
+      `Quadrant ${qc} (${o.latH}${o.lonH}), longitude ${lon10 === null ? "?" : (lon10 / 10).toFixed(1) + "° " + o.lonH}`);
 
   // ---------- Section 1 ----------
   const hasWx = o.ww !== "" || o.W1 !== "" || o.W2 !== "";
   const iX = hasWx ? "1" : "3";
   let h = o.cloudH || "/";
-  if (o.N === "0" && h === "/") h = "9";
+  if (o.N === "0" && h === "/") h = "9";        // OH1: h = 9 when no clouds
+  if (o.N === "9") h = "/";                      // OH1: h = / when sky obscured by fog or snow
   const VV = o.vis || "//";
   add("4" + iX + h + VV,
       `No precip group (4); weather group ${hasWx ? "included (1)" : "not observed (3)"}; cloud base: ${lookup(CLOUD_H, h) || "unknown"}; visibility: ${lookup(VIS, VV) || "not observed"}`);
@@ -644,7 +673,7 @@ function encode(o, s, last) {
   if (extra) add(extra, `Wind speed ${extra.slice(2)} kn (99 kn or more)`);
 
   const airT = num(o.airT), wetT = num(o.wetT), dewIn = num(o.dewT);
-  add(tempGrp("1", airT), airT === null ? "Air temp not observed" : `Air temp ${airT.toFixed(1)} °C`);
+  if (airT !== null) add(tempGrp("1", airT), `Air temp ${airT.toFixed(1)} °C`);
   if (airT === null) W.push("Air temperature missing.");
 
   // pressure
@@ -666,9 +695,9 @@ function encode(o, s, last) {
   if (td !== null && airT !== null && td > airT + 0.05) W.push("Dew point above air temp – check.");
   if (td !== null && airT !== null) td = Math.min(td, airT);
   D.td = td; D.rh = rh;
-  add(tempGrp("2", td), td === null ? "Dew point not available" : `Dew point ${td.toFixed(1)} °C${rh !== null ? " (RH " + Math.round(rh) + "%)" : ""}`);
+  if (td !== null) add(tempGrp("2", td), `Dew point ${td.toFixed(1)} °C${rh !== null ? " (RH " + Math.round(rh) + "%)" : ""}`);
 
-  add("4" + (pmsl === null ? "////" : pad(Math.round(pmsl * 10) % 10000, 4)), pmsl === null ? "Pressure not available" : `MSL pressure ${pmsl.toFixed(1)} hPa`);
+  if (pmsl !== null) add("4" + pad(Math.round(pmsl * 10) % 10000, 4), `MSL pressure ${pmsl.toFixed(1)} hPa`);
 
   const p3 = num(o.p3);
   let a = o.tendA;
@@ -682,9 +711,11 @@ function encode(o, s, last) {
       if (Math.abs(p3) > 15) W.push("3-hr pressure change over 15 hPa – check.");
     }
     add("5" + (a || "/") + (p3 === null ? "///" : pad(Math.min(Math.abs(p3) * 10, 999), 3)),
-        `Tendency: ${lookup(TEND, a) || "?"}; change ${p3 === null ? "?" : Math.abs(p3).toFixed(1) + " hPa"}`);
+        `Tendency: ${lookup(TEND, a) || "?"}; change ${p3 === null ? "?" : Math.abs(p3).toFixed(1) + " hPa"}${o.tendA === "" ? " (type picked automatically from the change – set it from the barograph trace if you can)" : ""}`);
   }
 
+  if (!hasWx) W.push("Present and past weather not entered. NOAA wants group 7 whenever weather is observed – if nothing significant, pick ww 00–03 and W1/W2 0–2.");
+  else if (o.ww === "" || o.W1 === "" || o.W2 === "") W.push("Group 7 has a blank part – set present weather ww and both past weather W1 and W2.");
   if (hasWx) {
     const w1 = o.W1 || "/", w2 = o.W2 || "/";
     if (o.W1 !== "" && o.W2 !== "" && +o.W2 > +o.W1) W.push("W2 should not be higher than W1.");
@@ -705,16 +736,30 @@ function encode(o, s, last) {
   } else if (N === "0" && (["CL","CM","CH"].some(k => o[k] !== "" && o[k] !== "0"))) W.push("Total cloud is 0 but cloud types are entered.");
 
   // ---------- Section 2 ----------
-  let Ds = "/", vs = "/";
-  if (sp !== null) {
+  // 222Dsvs = course and speed MADE GOOD during the last 3 hours (as TurboWin+ asks)
+  const dsOf = c => String([8, 1, 2, 3, 4, 5, 6, 7][Math.round(((c % 360) + 360) % 360 / 45) % 8]);
+  const vsOf = v => Math.round(v) === 0 ? "0" : String(Math.min(9, Math.ceil(Math.round(v) / 5)));
+  let Ds = "/", vs = "/", cmgSrc = "";
+  const tNow = o.date && hr !== null ? Date.parse(o.date + "T" + pad(hr, 2) + ":00:00Z") : null;
+  const hrsLast = last && last.utc && tNow ? (tNow - Date.parse(last.utc)) / 3.6e6 : null;
+  if ((o.cmgDs || "") !== "" || (o.cmgVs || "") !== "") {
+    Ds = o.cmgDs || "/"; vs = o.cmgVs || "/";
+    if (Ds === "0") vs = "0";
+    cmgSrc = "set by hand";
+  } else if (hrsLast !== null && hrsLast >= 1 && hrsLast <= 6 && last.D && last.D.lat !== undefined && D.lat !== undefined) {
+    const dN = (D.lat - last.D.lat) * 60, dE = (D.lon - last.D.lon) * 60 * Math.cos((D.lat + last.D.lat) / 2 * Math.PI / 180);
+    const dist = Math.hypot(dN, dE), v = dist / hrsLast;
+    if (Math.round(v) === 0) { Ds = "0"; vs = "0"; }
+    else { let c = Math.atan2(dE, dN) * 180 / Math.PI; if (c < 0) c += 360; Ds = dsOf(c); vs = vsOf(v); D.cmgC = c; }
+    D.cmgV = v; cmgSrc = `worked out from the last saved obs ${hrsLast.toFixed(1)} h ago`;
+  } else if (sp !== null) {
     if (Math.round(sp) === 0) { Ds = "0"; vs = "0"; }
-    else {
-      vs = String(Math.min(9, Math.ceil(Math.round(sp) / 5)));
-      if (crs !== null) Ds = String([8, 1, 2, 3, 4, 5, 6, 7][Math.round(crs / 45) % 8]);
-    }
+    else { vs = vsOf(sp); if (crs !== null) Ds = dsOf(crs); }
+    cmgSrc = "from the current course and speed (no obs saved 1–6 h ago) – change by hand if you altered course";
   }
+  D.cmgDs = Ds; D.cmgVs = vs; D.cmgSrc = cmgSrc;
   const dsName = { "0": "stopped", "1": "NE", "2": "E", "3": "SE", "4": "S", "5": "SW", "6": "W", "7": "NW", "8": "N", "/": "?" };
-  add("222" + Ds + vs, `Section 2 – course ${dsName[Ds]}, speed ${vs === "0" ? "0 kn" : vs === "9" ? "over 40 kn" : vs === "/" ? "?" : ((+vs - 1) * 5 + 1) + "–" + (+vs * 5) + " kn"}`, true);
+  add("222" + Ds + vs, `Section 2 – course made good last 3 h ${dsName[Ds]}, speed ${vs === "0" ? "0 kn" : vs === "9" ? "over 40 kn" : vs === "/" ? "?" : ((+vs - 1) * 5 + 1) + "–" + (+vs * 5) + " kn"}`, true);
 
   const sst = num(o.sst);
   if (sst !== null) {
@@ -733,7 +778,7 @@ function encode(o, s, last) {
     if (wh !== null && wspd !== null) {
       const f = bftOf(Math.round(wspd)), [lo, hi] = BFT_WAVE[f];
       if (wh < lo * .4 - .2 || wh > hi * 1.7 + .5)
-        W.push(`Wind waves ${wh} m are unusual for Force ${f} (NOAA guide: ${lo === hi ? lo : lo + "–" + (hi > 50 ? "14+" : hi)} m in deep water, steady wind). Check wind and sea – short fetch, a recent wind change, current, rain or ice can explain it.`);
+        W.push(`Wind waves ${wh} m are unusual for Force ${f} (NOAA guide: ${hi > 50 ? lo + "+" : lo === hi ? lo : lo + "–" + hi} m in deep water, steady wind). Check wind and sea – short fetch, a recent wind change, current, rain or ice can explain it.`);
     }
   }
 
@@ -925,7 +970,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 };
-const FIELDS = ["date","hour","latD","latM","latH","lonD","lonM","lonH","course","speed","windMode","relDir","relSpd","trueDir","trueSpd","bft",
+const FIELDS = ["date","hour","latD","latM","latH","lonD","lonM","lonH","course","speed","cmgDs","cmgVs","windMode","relDir","relSpd","trueDir","trueSpd","bft",
   "vis","ww","W1","W2","airT","wetT","wetIced","dewT","baro","p3","tendA","N","Nh","cloudH","CL","CM","CH",
   "sst","sstMethod","wwPer","wwHt","s1Dir","s1Per","s1Ht","s2Dir","s2Per","s2Ht","iceIs","iceThk","iceRs"];
 const DEF_CFG = { call: "LAHR7", ship: "STAR KIRKENES", baroH: "", baroC: "", anemo: "4", psy: "screen", sst: "intake", to: "Shipobs@noaa.gov", subj: "Weather Observation" };
@@ -953,6 +998,40 @@ function fillWW(filter) {
   $("wwList").innerHTML = html;
   markWW(true);
 }
+/* TurboWin-style step-by-step present weather: general condition -> specific condition (topmost applicable first) */
+const R = (a, b) => { const r = []; for (let i = a; i >= b; i--) r.push(String(i).padStart(2, "0")); return r; };
+const WWGEN = [
+  { side: "Dry", name: "Thunder heard during the last 10 minutes", codes: ["17"] },
+  { side: "Dry", name: "Fog (or ice fog) at time of obs", codes: R(49, 41) },
+  { side: "Dry", name: "Duststorm, sandstorm, drifting or blowing snow", codes: [...R(39, 30), "09", "08"] },
+  { side: "Dry", name: "Precipitation, fog or thunderstorm within last hour, not at time of obs", codes: R(29, 20) },
+  { side: "Dry", name: "Squalls or funnel cloud(s) within last hour or at time of obs", codes: ["19", "18"] },
+  { side: "Dry", name: "Lightning or precipitation within sight but not at ship; fog at a distance", codes: ["16", "15", "14", "13", "40"] },
+  { side: "Dry", name: "Shallow fog or mist", codes: ["12", "11", "10"] },
+  { side: "Dry", name: "Haze, dust, sand, smoke or blowing spray", codes: ["07", "06", "05", "04"] },
+  { side: "Dry", name: "Phenomena without significance", codes: ["03", "02", "01", "00"] },
+  { side: "Wet", name: "Thunderstorm* at time of obs", codes: R(99, 95) },
+  { side: "Wet", name: "Thunderstorm* during preceding hour but not at time of obs", codes: R(94, 91) },
+  { side: "Wet", name: "Showery precipitation, no thunder at time of obs or during preceding hour", codes: R(90, 80) },
+  { side: "Wet", name: "Solid precipitation, not in showers", codes: R(79, 70) },
+  { side: "Wet", name: "Rain", codes: R(69, 60) },
+  { side: "Wet", name: "Drizzle", codes: R(59, 50) }
+];
+let wwGen = -1;
+function drawGen() {
+  const btn = (g, i) => `<button type="button" class="gbtn${i === wwGen ? " on" : ""}" data-g="${i}">${g.name}</button>`;
+  const nd = side => `<button type="button" class="gbtn nd" data-g="nd">Not determined</button>`;
+  $("genDry").innerHTML = nd() + WWGEN.map((g, i) => g.side === "Dry" ? btn(g, i) : "").join("");
+  $("genWet").innerHTML = nd() + WWGEN.map((g, i) => g.side === "Wet" ? btn(g, i) : "").join("");
+  const v = $("ww").value;
+  $("wwSpec").innerHTML = wwGen < 0 ? `<div class="hint" style="padding:10px">Choose a general condition above first.</div>` :
+    WWGEN[wwGen].codes.map(c => `<button type="button" class="wwr${c === v ? " on" : ""}" data-v="${c}"><b>${c}</b>${WW[+c]}</button>`).join("");
+}
+function syncGen() {   // open the group that holds the current code
+  const v = $("ww").value; const i = v === "" ? -1 : WWGEN.findIndex(g => g.codes.includes(v));
+  if (i !== wwGen && (v === "" ? false : true)) { wwGen = i; }
+  drawGen();
+}
 function markWW(scroll) {
   const v = $("ww").value, list = $("wwList"); let sel = null;
   list.querySelectorAll(".wwr").forEach(b => { const on = b.dataset.v === v; b.classList.toggle("on", on); if (on) sel = b; });
@@ -961,7 +1040,7 @@ function markWW(scroll) {
 function initSelects() {
   $("hour").innerHTML = Array.from({ length: 24 }, (_, i) => { const h = String(i).padStart(2, "0"); return `<option value="${h}">${h}00${i % 6 === 0 ? " ★ main" : ""}</option>`; }).join("");
   $("bftGrid").innerHTML = BFT_NAME.map((n, i) => `<button type="button" class="pcard" data-b="${i}"><img src="${PHOTOS.sea[i]}" alt="Sea state Force ${i}" loading="lazy"><span class="zoom" data-zoom="sea:${i}">Enlarge</span><span><b>${i}</b>${n} · ${BFT_KN[i]} kn</span></button>`).join("");
-  fill("vis", VIS, "– not observed –");
+  fill("vis", VIS, "Not determined");
   fillWW("");
   fill("W1", PASTW, "– not observed –"); fill("W2", PASTW, "– not observed –");
   fill("tendA", TEND, "– auto from change –");
@@ -1036,12 +1115,15 @@ function render(force) {
     const f = bftOf(Math.round(D.wspd));
     $("seaCheck").innerHTML = `<div class="seachk"><img src="${PHOTOS.sea[f]}" alt="" data-zoom="sea:${f}"><div><b>Sea check – Force ${f}, ${BFT_NAME[f]} (${BFT_KN[f]} kn)</b><br>The sea should look roughly like this: ${BFT_SEA[f]} <a href="#" class="lnk" data-zoom="sea:${f}">Enlarge</a></div></div>`;
   } else $("seaCheck").innerHTML = "";
+  { const sec = { "0": "stationary", "8": "338–022", "1": "023–067", "2": "068–112", "3": "113–157", "4": "158–202", "5": "203–247", "6": "248–292", "7": "293–337", "/": "?" };
+    const spd = { "0": "0 kn", "1": "1–5 kn", "2": "6–10 kn", "3": "11–15 kn", "4": "16–20 kn", "5": "21–25 kn", "6": "26–30 kn", "7": "31–35 kn", "8": "36–40 kn", "9": "over 40 kn", "/": "?" };
+    $("cmgCalc").innerHTML = D.cmgSrc ? `Made good last 3 h: <b>${sec[D.cmgDs] || "?"}${D.cmgDs !== "0" ? " · " + (spd[D.cmgVs] || "?") : ""}</b> (Ds ${D.cmgDs}, vs ${D.cmgVs}) – ${D.cmgSrc}` : "Made good: –"; }
   $("humCalc").innerHTML = D.td === null || D.td === undefined ? "Dew point: –" : `Dew point: <b>${D.td.toFixed(1)} °C</b>${D.rh != null ? " · RH " + Math.round(D.rh) + "%" : ""}`;
   $("presCalc").innerHTML = D.pmsl == null ? "MSL pressure: –" : `MSL pressure: <b>${D.pmsl.toFixed(1)} hPa</b> (reading ${(+o.baro).toFixed(1)} + corr ${(num(cfg.baroC) || 0).toFixed(1)} + height ${(D.pmsl - (+o.baro) - (num(cfg.baroC) || 0)).toFixed(1)})`;
   // summaries
   $("s2").textContent = o.course || o.speed ? `${o.course || "?"}° / ${o.speed || "?"} kn` : "";
   $("s3").textContent = D.wspd != null ? `${D.wdir == null ? "?" : String(Math.round(D.wdir)).padStart(3, "0")}° ${Math.round(D.wspd)} kn` : "";
-  markWW(false); markClouds();
+  markWW(false); markClouds(); syncGen();
   $("wwNow").innerHTML = o.ww ? `Selected: <b>${o.ww} – ${WW[+o.ww]}</b>` : "Selected: – not observed –";
   $("s4").textContent = o.vis ? `VV ${o.vis}${o.ww ? " · ww " + o.ww : ""}` : "";
   $("s5").textContent = o.airT ? `${o.airT}°C${D.td != null ? " / Td " + D.td.toFixed(1) : ""}` : "";
@@ -1113,6 +1195,20 @@ document.querySelectorAll("[data-flip]").forEach(b => b.onclick = () => {
 document.addEventListener("input", e => { if (e.target.closest("#tab-obs") && e.target.id !== "wwFilter") render(); });
 document.addEventListener("change", e => { if (e.target.closest("#tab-obs")) render(); });
 $("wwFilter").addEventListener("input", e => fillWW(e.target.value));
+document.querySelectorAll("#wwMode button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#wwMode button").forEach(x => x.classList.toggle("on", x === b));
+  $("wwGuide").classList.toggle("hide", b.dataset.m !== "guide"); $("wwAll").classList.toggle("hide", b.dataset.m !== "all");
+  if (b.dataset.m === "all") markWW(true); else syncGen();
+});
+["genDry", "genWet"].forEach(id => $(id).addEventListener("click", e => {
+  const b = e.target.closest(".gbtn"); if (!b) return;
+  if (b.dataset.g === "nd") { wwGen = -1; $("ww").value = ""; render(); drawGen(); return; }
+  wwGen = +b.dataset.g; const g = WWGEN[wwGen];
+  if (g.codes.length === 1) $("ww").value = g.codes[0];
+  else if (!g.codes.includes($("ww").value)) $("ww").value = "";
+  render(); drawGen();
+}));
+$("wwSpec").addEventListener("click", e => { const b = e.target.closest(".wwr"); if (!b) return; $("ww").value = b.dataset.v; render(); drawGen(); });
 /* lightbox */
 function openLB(key) {
   const [grp, c] = key.split(":");

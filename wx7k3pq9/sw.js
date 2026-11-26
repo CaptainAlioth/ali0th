@@ -1,5 +1,5 @@
-// SOFast WX V01.19 offline cache. Change the version in CACHE when you upload a new index.html.
-const CACHE = "sofastwx-V01.19";
+// SOFast WX V01.20 offline cache. Change the version in CACHE when you upload a new index.html.
+const CACHE = "sofastwx-V01.20";
 const FILES = ["./", "./index.html"];
 
 self.addEventListener("install", e => {
